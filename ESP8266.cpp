@@ -23,10 +23,6 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 #endif
 
 
-int chlID;		//client id(0-4)
-
-
-
 boolean ESP8266::begin(void)
 {
 	DebugSerial.begin(DEBUG_BAUD_RATE);
@@ -35,16 +31,16 @@ boolean ESP8266::begin(void)
 	_wifi.flush();
 	_wifi.setTimeout(ESP8266_SERIAL_TIMEOUT);
 	_wifi.println("AT+RST");
-	DBG("AT+RST\r\n");
+
+	DBG("AT+RST \r\n");
 
 	if (_wifi.find("ready")) {
-		DBG("Module is ready\r\n");
-		return true;
+		DBG("ESP8266 is ready \r\n");
+		return confConnection();
 	} else {
-		DBG("Module have no response\r\n");
+		DBG("ESP8266 is not responding! \r\n");
 		return false;
 	}
-
 }
 
 
@@ -69,96 +65,21 @@ boolean ESP8266::begin(void)
 		false	-	unsuccessfully
 
 ***************************************************************************/
-bool ESP8266::Initialize(byte mode, String ssid, String pwd, byte chl, byte ecn)
+bool ESP8266::Initialize(String ssid, String pwd)
 {
-	if (mode == STA)
-	{	
-		bool b = confMode(mode);
-		if (!b)
-		{
-			return false;
-		}
-		Reset();
-		confJAP(ssid, pwd);
-	}
-	else if (mode == AP)
+	_ssid = ssid;
+	_pwd = pwd;
+
+	if (!confMode(STA))
 	{
-		bool b = confMode(mode);
-		if (!b)
-		{
-			return false;
-		}
-		Reset();
-		confSAP(ssid, pwd, chl, ecn);
+		return false;
 	}
-	else if (mode == AP_STA)
-	{
-		bool b = confMode(mode);
-		if (!b)
-		{
-			return false;
-		}
-		Reset();
-		confJAP(ssid, pwd);
-		confSAP(ssid, pwd, chl, ecn);
-	}
+
+	Reset();
+
+	confJAP(ssid, pwd);
 	
 	return true;
-}
-
-/*************************************************************************
-//Set up tcp or udp connection
-
-	type:	tcp or udp
-	
-	addr:	ip address
-	
-	port:	port number
-	
-	a:	set multiple connection
-		0 for sigle connection
-		1 for multiple connection
-		
-	id:	id number(0-4)
-
-	return:
-		true	-	successfully
-		false	-	unsuccessfully
-
-***************************************************************************/
-boolean ESP8266::ipConfig(byte type, String addr, int port, boolean a, byte id)
-{
-	boolean result = false;
-	if (a == 0 )
-	{
-		confMux(a);
-		
-		long timeStart = millis();
-		while (1)
-		{
-			long time0 = millis();
-			if (time0 - timeStart > 5000)
-			{
-				break;
-			}
-		}
-		result = newMux(type, addr, port);
-	}
-	else if (a == 1)
-	{
-		confMux(a);
-		long timeStart = millis();
-		while (1)
-		{
-			long time0 = millis();
-			if (time0 - timeStart > 5000)
-			{
-				break;
-			}
-		}
-		result = newMux(id, type, addr, port);
-	}
-	return result;
 }
 
 /*************************************************************************
@@ -253,20 +174,18 @@ int ESP8266::ReceiveMessage(char *buf)
 
 //////////////////////////////////////////////////////////////////////////
 
-
 /*************************************************************************
 //reboot the wifi module
-
-
-
 ***************************************************************************/
 void ESP8266::Reset(void)
 {
     _wifi.println("AT+RST");
+
+
 	unsigned long start;
 	start = millis();
     while (millis()-start<5000) {                            
-        if(_wifi.find("ready")==true)
+        if(_wifi.find("ready") == true)
         {
 			DBG("reboot wifi is OK\r\n");
            break;
@@ -284,46 +203,6 @@ void ESP8266::Reset(void)
  */
 
 /*************************************************************************
-//inquire the current mode of wifi module
-
-	return:	string of current mode
-		Station
-		AP
-		AP+Station
-
-***************************************************************************/
-String ESP8266::showMode()
-{
-    String data;
-    _wifi.println("AT+CWMODE?");  
-	unsigned long start;
-	start = millis();
-    while (millis()-start<2000) {
-     if(_wifi.available()>0)
-     {
-     char a =_wifi.read();
-     data=data+a;
-     }
-     if (data.indexOf("OK")!=-1)
-     {
-         break;
-     }
-  }
-    if(data.indexOf("1")!=-1)
-    {
-        return "Station";
-    }else if(data.indexOf("2")!=-1)
-    {
-            return "AP";
-    }else if(data.indexOf("3")!=-1)
-    {
-         return "AP+Station";
-    }
-}
-
-
-
-/*************************************************************************
 //configure the operation mode
 
 	a:	
@@ -336,32 +215,31 @@ String ESP8266::showMode()
 		false	-	unsuccessfully
 
 ***************************************************************************/
-
 bool ESP8266::confMode(byte a)
 {
-    String data;
      _wifi.print("AT+CWMODE=");  
-     _wifi.println(String(a));
-	 unsigned long start;
-	start = millis();
-    while (millis()-start<2000) {
-      if(_wifi.available()>0)
-      {
-      char a =_wifi.read();
-      data=data+a;
-      }
-      if (data.indexOf("OK")!=-1 || data.indexOf("no change")!=-1)
-      {
-          return true;
-      }
-	  if (data.indexOf("ERROR")!=-1 || data.indexOf("busy")!=-1)
-	  {
-		  return false;
-	  }
+	 _wifi.println(String(a));
+
+		 String data;
+		 unsigned long start;
+		start = millis();
+		while (millis()-start<2000) {
+		  if(_wifi.available()>0)
+		  {
+		  char a =_wifi.read();
+		  data=data+a;
+		  }
+		  if (data.indexOf("OK")!=-1 || data.indexOf("no change")!=-1)
+		  {
+			  return true;
+		  }
+		  if (data.indexOf("ERROR")!=-1 || data.indexOf("busy")!=-1)
+		  {
+			  return false;
+		  }
 	  
    }
 }
-
 
 /*************************************************************************
 //show the list of wifi hotspot
@@ -371,7 +249,6 @@ bool ESP8266::confMode(byte a)
 		
 
 ***************************************************************************/
-
 String ESP8266::showAP(void)
 {
     String data;
@@ -406,9 +283,8 @@ String ESP8266::showAP(void)
 	   data.replace(head,"");
 
         return data;
-        }
+    }
  }
-
 
 /*************************************************************************
 //show the name of current wifi access port
@@ -447,7 +323,6 @@ String ESP8266::showJAP(void)
           return data;
 }
 
-
 /*************************************************************************
 //configure the SSID and password of the access port
 		
@@ -483,6 +358,7 @@ boolean ESP8266::confJAP(String ssid, String pwd)
     }
 	return false;
 }
+
 /*************************************************************************
 //quite the access port
 		
@@ -492,7 +368,6 @@ boolean ESP8266::confJAP(String ssid, String pwd)
 		
 
 ***************************************************************************/
-
 boolean ESP8266::quitAP(void)
 {
     _wifi.println("AT+CWQAP");
@@ -509,81 +384,6 @@ boolean ESP8266::quitAP(void)
 
 }
 
-/*************************************************************************
-//show the parameter of ssid, password, channel, encryption in AP mode
-		
-		return:
-			mySAP:<SSID>,<password>,<channel>,<encryption>
-
-***************************************************************************/
-String ESP8266::showSAP()
-{
-    _wifi.println("AT+CWSAP?");  
-      String data;
-      unsigned long start;
-	start = millis();
-    while (millis()-start<3000) {
-       if(_wifi.available()>0)
-       {
-       char a =_wifi.read();
-       data=data+a;
-       }
-       if (data.indexOf("OK")!=-1 || data.indexOf("ERROR")!=-1 )
-       {
-           break;
-       }
-    }
-      char head[4] = {0x0D,0x0A};   
-      char tail[7] = {0x0D,0x0A,0x0D,0x0A};        
-      data.replace("AT+CWSAP?","");
-      data.replace("+CWSAP","mySAP");
-      data.replace("OK","");
-	  data.replace(tail,"");
-      data.replace(head,"");
-      
-          return data;
-}
-
-/*************************************************************************
-//configure the parameter of ssid, password, channel, encryption in AP mode
-		
-		return:
-			true	-	successfully
-			false	-	unsuccessfully
-
-***************************************************************************/
-
-boolean ESP8266::confSAP(String ssid, String pwd, byte chl, byte ecn)
-{
-    _wifi.print("AT+CWSAP=");  
-    _wifi.print("\"");     //"ssid"
-    _wifi.print(ssid);
-    _wifi.print("\"");
-
-    _wifi.print(",");
-
-    _wifi.print("\"");      //"pwd"
-    _wifi.print(pwd);
-    _wifi.print("\"");
-
-    _wifi.print(",");
-    _wifi.print(String(chl));
-
-    _wifi.print(",");
-    _wifi.println(String(ecn));
-	unsigned long start;
-	start = millis();
-    while (millis()-start<3000) {                            
-        if(_wifi.find("OK")==true )
-        {
-           return true;
-        }
-     }
-	 
-	 return false;
-
-}
-
 
 /*********************************************
  *********************************************
@@ -595,217 +395,63 @@ boolean ESP8266::confSAP(String ssid, String pwd, byte chl, byte ecn)
  */
 
 /*************************************************************************
-//inquire the connection status
-		
-		return:		string of connection status
-			<ID>  0-4
-			<type>  tcp or udp
-			<addr>  ip
-			<port>  port number
-
-***************************************************************************/
-
-String ESP8266::showStatus(void)
-{
-    _wifi.println("AT+CIPSTATUS");  
-      String data;
-    unsigned long start;
-	start = millis();
-    while (millis()-start<3000) {
-       if(_wifi.available()>0)
-       {
-       char a =_wifi.read();
-       data=data+a;
-       }
-       if (data.indexOf("OK")!=-1)
-       {
-           break;
-       }
-    }
-
-          char head[4] = {0x0D,0x0A};   
-          char tail[7] = {0x0D,0x0A,0x0D,0x0A};        
-          data.replace("AT+CIPSTATUS","");
-          data.replace("OK","");
-		  data.replace(tail,"");
-          data.replace(head,"");
-          
-          return data;
-}
-
-/*************************************************************************
-//show the current connection mode(sigle or multiple)
-		
-		return:		string of connection mode
-			0	-	sigle
-			1	-	multiple
-
-***************************************************************************/
-String ESP8266::showMux(void)
-{
-    String data;
-    _wifi.println("AT+CIPMUX?");  
-
-      unsigned long start;
-	start = millis();
-    while (millis()-start<3000) {
-       if(_wifi.available()>0)
-       {
-       char a =_wifi.read();
-       data=data+a;
-       }
-       if (data.indexOf("OK")!=-1)
-       {
-           break;
-       }
-    }
-          char head[4] = {0x0D,0x0A};   
-          char tail[7] = {0x0D,0x0A,0x0D,0x0A};        
-          data.replace("AT+CIPMUX?","");
-          data.replace("+CIPMUX","showMux");
-          data.replace("OK","");
-		  data.replace(tail,"");
-          data.replace(head,"");
-          
-          return data;
-}
-
-/*************************************************************************
-//configure the current connection mode(sigle or multiple)
-		
-		a:		connection mode
-			0	-	sigle
-			1	-	multiple
-			
+//configure the current connection mode (single)
 	return:
 		true	-	successfully
 		false	-	unsuccessfully
 ***************************************************************************/
-boolean ESP8266::confMux(boolean a)
+boolean ESP8266::confConnection()
 {
-	_wifi.print("AT+CIPMUX=");
-	_wifi.println(a);           
+	_wifi.print("AT+CIPMUX=0");
 	unsigned long start;
 	start = millis();
 	while (millis()-start<3000) {                            
-        if(_wifi.find("OK")==true )
+        if(_wifi.find("OK"))
         {
            return true;
         }
      }
-	 
 	 return false;
 }
 
-
 /*************************************************************************
-//Set up tcp or udp connection	(signle connection mode)
-
-	type:	tcp or udp
+//Set up tcp connection	(signle connection mode)
 	
 	addr:	ip address
 	
 	port:	port number
 		
-
 	return:
 		true	-	successfully
 		false	-	unsuccessfully
 
 ***************************************************************************/
-boolean ESP8266::newMux(byte type, String addr, int port)
+boolean ESP8266::newConnection(String addr, int port)
 
 {
     String data;
-    _wifi.print("AT+CIPSTART=");
-    if(type>0)
-    {
-        _wifi.print("\"TCP\"");
-    }else
-    {
-        _wifi.print("\"UDP\"");
-    }
-    _wifi.print(",");
-    _wifi.print("\"");
+    _wifi.print("AT+CIPSTART=\"TCP\",\"");
     _wifi.print(addr);
-    _wifi.print("\"");
-    _wifi.print(",");
-//    _wifi.print("\"");
+    _wifi.print("\",");
     _wifi.println(String(port));
-//    _wifi.println("\"");
+
     unsigned long start;
 	start = millis();
 	while (millis()-start<3000) { 
-     if(_wifi.available()>0)
-     {
-     char a =_wifi.read();
-     data=data+a;
-     }
-     if (data.indexOf("OK")!=-1 || data.indexOf("ALREAY CONNECT")!=-1 || data.indexOf("ERROR")!=-1)
-     {
-         return true;
-     }
-  }
-  return false;
+		 if(_wifi.available()>0)
+		 {
+		 char a =_wifi.read();
+		 data=data+a;
+		 }
+		 if (data.indexOf("OK")!=-1 || data.indexOf("ALREAY CONNECT")!=-1 || data.indexOf("ERROR")!=-1)
+		 {
+			 return true;
+		 }
+
+	}
+	return false;
 }
-/*************************************************************************
-//Set up tcp or udp connection	(multiple connection mode)
 
-	type:	tcp or udp
-	
-	addr:	ip address
-	
-	port:	port number
-		
-	id:	id number(0-4)
-
-	return:
-		true	-	successfully
-		false	-	unsuccessfully
-
-***************************************************************************/
-boolean ESP8266::newMux(byte id, byte type, String addr, int port)
-
-{
-
-    _wifi.print("AT+CIPSTART=");
-    _wifi.print("\"");
-    _wifi.print(String(id));
-    _wifi.print("\"");
-    if(type>0)
-    {
-        _wifi.print("\"TCP\"");
-    }
-	else
-    {
-        _wifi.print("\"UDP\"");
-    }
-    _wifi.print(",");
-    _wifi.print("\"");
-    _wifi.print(addr);
-    _wifi.print("\"");
-    _wifi.print(",");
-//    _wifi.print("\"");
-    _wifi.println(String(port));
-//    _wifi.println("\"");
-    String data;
-    unsigned long start;
-	start = millis();
-	while (millis()-start<3000) { 
-     if(_wifi.available()>0)
-     {
-     char a =_wifi.read();
-     data=data+a;
-     }
-     if (data.indexOf("OK")!=-1 || data.indexOf("ALREAY CONNECT")!=-1 )
-     {
-         return true;
-     }
-  }
-  return false;
-  
-
-}
 /*************************************************************************
 //send data in sigle connection mode
 
@@ -836,61 +482,7 @@ boolean ESP8266::Send(String str)
 		_wifi.print(str);
 	else
 	{
-		closeMux();
-		return false;
-	}
-
-
-    String data;
-    start = millis();
-	while (millis()-start<5000) {
-     if(_wifi.available()>0)
-     {
-     char a =_wifi.read();
-     data=data+a;
-     }
-     if (data.indexOf("SEND OK")!=-1)
-     {
-         return true;
-     }
-  }
-  return false;
-}
-
-/*************************************************************************
-//send data in multiple connection mode
-
-	id:		<id>(0-4)
-	
-	str:	string of message
-
-	return:
-		true	-	successfully
-		false	-	unsuccessfully
-
-***************************************************************************/
-boolean ESP8266::Send(byte id, String str)
-{
-    _wifi.print("AT+CIPSEND=");
-
-    _wifi.print(String(id));
-    _wifi.print(",");
-    _wifi.println(str.length());
-    unsigned long start;
-	start = millis();
-	bool found;
-	while (millis()-start<5000) {                          
-        if(_wifi.find(">")==true )
-        {
-			found = true;
-           break;
-        }
-     }
-	 if(found)
-		_wifi.print(str);
-	else
-	{
-		closeMux(id);
+		closeConnection();
 		return false;
 	}
 
@@ -916,7 +508,7 @@ boolean ESP8266::Send(byte id, String str)
 
 
 ***************************************************************************/
-void ESP8266::closeMux(void)
+void ESP8266::closeConnection(void)
 {
     _wifi.println("AT+CIPCLOSE");
 
@@ -936,34 +528,6 @@ void ESP8266::closeMux(void)
   }
 }
 
-
-/*************************************************************************
-//Set up tcp or udp connection	(multiple connection mode)
-		
-	id:	id number(0-4)
-
-***************************************************************************/
-void ESP8266::closeMux(byte id)
-{
-    _wifi.print("AT+CIPCLOSE=");
-    _wifi.println(String(id));
-    String data;
-    unsigned long start;
-	start = millis();
-	while (millis()-start<3000) {
-     if(_wifi.available()>0)
-     {
-     char a =_wifi.read();
-     data=data+a;
-     }
-     if (data.indexOf("OK")!=-1 || data.indexOf("Link is not")!=-1 || data.indexOf("Cant close")!=-1)
-     {
-         break;
-     }
-  }
-
-}
-
 /*************************************************************************
 //show the current ip address
 		
@@ -977,25 +541,25 @@ String ESP8266::showIP(void)
     //DBG("AT+CIFSR\r\n");
 	for(int a=0; a<3;a++)
 	{
-	_wifi.println("AT+CIFSR");  
-	start = millis();
-	while (millis()-start<3000) {
-     while(_wifi.available()>0)
-     {
-     char a =_wifi.read();
-     data=data+a;
-     }
-     if (data.indexOf("AT+CIFSR")!=-1)
-     {
-         break;
-     }
-	}
-	if(data.indexOf(".") != -1)
-	{
-		break;
-	}
-	data = "";
-  }
+		_wifi.println("AT+CIFSR");  
+		start = millis();
+		while (millis()-start<3000) {
+			 while(_wifi.available()>0)
+			 {
+			 char a =_wifi.read();
+			 data=data+a;
+			 }
+			 if (data.indexOf("AT+CIFSR")!=-1)
+			 {
+				 break;
+			 }
+		}
+		if(data.indexOf(".") != -1)
+		{
+			break;
+		}
+		data = "";
+	  }
 	//DBG(data);
 	//DBG("\r\n");
     char head[4] = {0x0D,0x0A};   
@@ -1006,49 +570,6 @@ String ESP8266::showIP(void)
   
     return data;
 }
-
-/*************************************************************************
-////set the parameter of server
-
-	mode:
-		0	-	close server mode
-		1	-	open server mode
-		
-	port:	<port>
-		
-	return:
-		true	-	successfully
-		false	-	unsuccessfully
-
-***************************************************************************/
-
-boolean ESP8266::confServer(byte mode, int port)
-{
-    _wifi.print("AT+CIPSERVER=");  
-    _wifi.print(String(mode));
-    _wifi.print(",");
-    _wifi.println(String(port));
-
-    String data;
-    unsigned long start;
-	start = millis();
-	boolean found = false;
-	while (millis()-start<3000) {
-     if(_wifi.available()>0)
-     {
-     char a =_wifi.read();
-     data=data+a;
-     }
-     if (data.indexOf("OK")!=-1 || data.indexOf("no charge")!=-1)
-     {
-		found = true;
-         break;
-     }
-  }
-  return found;
-}
-
-
 
 void ESP8266::update()
 {

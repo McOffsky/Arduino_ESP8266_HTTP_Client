@@ -70,9 +70,14 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 #define SERIAL_TX_BUFFER_SIZE 128
 #define SERIAL_RX_BUFFER_SIZE 128
 
+#define STATE_IDLE			0
+#define STATE_CONNECTED		1
+#define STATE_RESETING		3
+#define STATE_SENDING_DATA	4
+#define STATE_RECIVING_DATA	5
 
-
-
+#define SOCKET_CONNECTED	0
+#define SOCKET_DISCONNECTED	1
 
 class ESP8266 
 {
@@ -81,45 +86,43 @@ class ESP8266
     boolean begin(void);
 	
 	//Initialize port
-	bool Initialize(byte mode, String ssid, String pwd, byte chl = 1, byte ecn = 2);
-	boolean ipConfig(byte type, String addr, int port, boolean a = 0, byte id = 0);
+	bool Initialize(String ssid, String pwd);
 	
-	boolean Send(String str);  //send data in sigle connection mode
-	boolean Send(byte id, String str);  //send data int multiple connection mode
-		
 	int ReceiveMessage(char *buf);
 	
-    //String begin(void);
     /*=================WIFI Function Command=================*/
-    void Reset(void);    //reset the module
-	void HardReset(void);    //reset the module
 	bool confMode(byte a);   //set the working mode of module
 	boolean confJAP(String ssid , String pwd);    //set the name and password of wifi 
-	boolean confSAP(String ssid , String pwd , byte chl , byte ecn);       //set the parametter of SSID, password, channel, encryption in AP mode.
 	
-    String showMode(void);   //inquire the current mode of wifi module
     String showAP(void);   //show the list of wifi hotspot
     String showJAP(void);  //show the name of current wifi access port
     boolean quitAP(void);    //quit the connection of current wifi
-    String showSAP(void);     //show the parameter of ssid, password, channel, encryption in AP mode
 
     /*================TCP/IP commands================*/
-    String showStatus(void);    //inquire the connection status
-    String showMux(void);       //show the current connection mode(sigle or multiple)
-    boolean confMux(boolean a);    //set the connection mode(sigle:0 or multiple:1)
-    boolean newMux(byte type, String addr, int port);   //create new tcp or udp connection (sigle connection mode)
-    boolean newMux(byte id, byte type, String addr, int port);   //create new tcp or udp connection (multiple connection mode)(id:0-4) 
-    void closeMux(void);   //close tcp or udp (sigle connection mode)
-    void closeMux(byte id); //close tcp or udp (multiple connection mode)
+    boolean confConnection();    //set the connection mode(sigle:0 or multiple:1)
+	boolean newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
+	void closeConnection(void);   //close tcp or udp (sigle connection mode)
     String showIP(void);    //show the current ip address
-    boolean confServer(byte mode, int port);  //set the parameter of server
 	
 	String m_rev;
 
-
 	void update();
+
+	boolean Send(String str);  //send data in sigle connection mode
+
+	void Reset(void);    //reset the module
+	void HardReset(void);    //reset the module with RST pin
+
+	void setOnDataRecived(void(*handler)());
+	void setOnWifiConnected(void(*handler)());
+	void setOnWifiDisconnected(void(*handler)());
+	void sendHttpRequest(char *method, char *ipaddr, uint8_t port, char *post, char *get);
+
   protected:
-	unsigned long currentTimestamp;
+	unsigned long _currentTimestamp;
+	byte _state;
+	String _ssid;
+	String _pwd;
 };
 
 #endif
