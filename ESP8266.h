@@ -2,53 +2,49 @@
 /*
 ESP8266 library
 
-Created by Stan Lee(Lizq@iteadstudio.com)
-2014/10/8
-
-Modified version
-V1.0	released the first version of ESP8266 library
-
-
+Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski (igor.makowski@gmail.com)
+2015/1/4
 
 */
 
-#ifndef __UARTWIFI_H__
-#define __UARTWIFI_H__
-#include <Arduino.h>
-//#include "NilRTOS.h"
-#include <SoftwareSerial.h>
+#ifndef __ESP8266_H__ 
+#define __ESP8266_H__
 
-#define _DBG_RXPIN_ 2
-#define _DBG_TXPIN_ 3
+#if defined(ARDUINO) && ARDUINO >= 100
+	#include "Arduino.h"
+#else
+	#include "WProgram.h"
+#endif
 
-#define debugBaudRate 9600
+#define ESP8266_BAUD_RATE 9600 // change to 115200 if you have old firmare on your esp chip
+#define DEBUG_BAUD_RATE 9600
 
+#define ESP8266_SERIAL_TIMEOUT 3000
+
+#define ESP8266_RST 16 // connected to RST pin on ESP8266
 
 //#define UNO			//uncomment this line when you use it with UNO board
 #define MEGA		//uncomment this line when you use it with MEGA board
 
-
 #define DEBUG
 
-
 #ifdef UNO
-#define _cell	Serial
-#define DebugSerial	mySerial
+	#include <SoftwareSerial.h>
 
+	#define _DBG_RXPIN_ 2  //needed only on uno
+	#define _DBG_TXPIN_ 3  //needed only on uno
+
+	extern SoftwareSerial mySerial;
+
+	#define _wifi	Serial
+	#define DebugSerial	mySerial
 #endif  
+
 #ifdef MEGA
-#define _cell	Serial1
-#define DebugSerial	Serial
+	#define _wifi	Serial1 
+	#define DebugSerial	Serial
 #endif  
-		
-
-		
-		
-#ifdef UNO
-extern SoftwareSerial mySerial;
-
-#endif
-
+	
 
 //The way of encrypstion
 #define    OPEN          0
@@ -78,11 +74,11 @@ extern SoftwareSerial mySerial;
 
 
 
-class WIFI
+class ESP8266 
 {
   public:
 
-    void begin(void);
+    boolean begin(void);
 	
 	//Initialize port
 	bool Initialize(byte mode, String ssid, String pwd, byte chl = 1, byte ecn = 2);
@@ -96,6 +92,7 @@ class WIFI
     //String begin(void);
     /*=================WIFI Function Command=================*/
     void Reset(void);    //reset the module
+	void HardReset(void);    //reset the module
 	bool confMode(byte a);   //set the working mode of module
 	boolean confJAP(String ssid , String pwd);    //set the name and password of wifi 
 	boolean confSAP(String ssid , String pwd , byte chl , byte ecn);       //set the parametter of SSID, password, channel, encryption in AP mode.
@@ -119,6 +116,10 @@ class WIFI
 	
 	String m_rev;
 
+
+	void update();
+  protected:
+	unsigned long currentTimestamp;
 };
 
 #endif

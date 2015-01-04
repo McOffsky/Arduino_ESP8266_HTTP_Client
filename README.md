@@ -1,3 +1,5 @@
+# NOT WORKING YET #
+
 # ESP8266 library #
 
 When you use with UNO board, uncomment the follow line in uartWIFI.h.
