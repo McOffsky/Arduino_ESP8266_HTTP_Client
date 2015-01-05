@@ -67,8 +67,7 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 #define    AP      2
 #define    AP_STA  3
 
-#define SERIAL_TX_BUFFER_SIZE 128
-#define SERIAL_RX_BUFFER_SIZE 128
+#define SERIAL_RX_BUFFER_SIZE 256
 
 #define STATE_IDLE			0
 #define STATE_CONNECTED		1
@@ -78,6 +77,11 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 
 #define SOCKET_CONNECTED	0
 #define SOCKET_DISCONNECTED	1
+
+#define SERIAL_RESPONSE_FALSE	0
+#define SERIAL_RESPONSE_TRUE	1
+#define SERIAL_RESPONSE_TIMEOUT	2
+
 
 class ESP8266 
 {
@@ -110,19 +114,35 @@ class ESP8266
 
 	boolean Send(String str);  //send data in sigle connection mode
 
-	void Reset(void);    //reset the module
+	void SoftReset(void);    //reset the module AT+RST
+	static void PostSoftReset(uint8_t serialResponseStatus);
 	void HardReset(void);    //reset the module with RST pin
 
 	void setOnDataRecived(void(*handler)());
 	void setOnWifiConnected(void(*handler)());
 	void setOnWifiDisconnected(void(*handler)());
 	void sendHttpRequest(char *method, char *ipaddr, uint8_t port, char *post, char *get);
+	byte state;
+
+
 
   protected:
-	unsigned long _currentTimestamp;
-	byte _state;
-	String _ssid;
-	String _pwd;
+	char rxBuffer[SERIAL_RX_BUFFER_SIZE];
+
+	unsigned long currentTimestamp;
+	String ssid;
+	String pwd;
+
+	void(*serialResponseHandler)(uint8_t serialResponseStatus);
+	unsigned long serialResponseTimeout;
+	unsigned long serialResponseTimestamp;
+	char(*serialResponseKeywordsTrue)[10];
+	char(*serialResponseKeywordsFalse)[10];
+
+	boolean bufferFind(char(*keywords)[10] = NULL);
+
+	void readResponse(unsigned long timeout, void(*handler)(uint8_t serialResponseStatus), char(*keywordsTrue)[10] = NULL, char(*keywordsFalse)[10] = NULL);
 };
 
+extern ESP8266 wifi;
 #endif
