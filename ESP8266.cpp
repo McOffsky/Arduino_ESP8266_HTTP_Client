@@ -571,13 +571,12 @@ void ESP8266::ipWatchdog(void)
 void ESP8266::fetchIP(void)
 {
 	_wifiSerial.println("AT+CIFSR");
-
 	setResponseTrueKeywords("OK");
 	setResponseFalseKeywords();
-	readResponse(3000, postFetchIP);
+	readResponse(5000, PostFetchIP);
 }
 
-void ESP8266::postFetchIP(uint8_t serialResponseStatus)
+void ESP8266::PostFetchIP(uint8_t serialResponseStatus)
 {
 	char * pch;
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
@@ -588,7 +587,7 @@ void ESP8266::postFetchIP(uint8_t serialResponseStatus)
 				if ((uint8_t)'0' < (uint8_t) *pch && (1 + (uint8_t)'9') > (uint8_t)*pch) {
 					strcpy(wifi.ip, pch);
 					pch = NULL;
-
+					wifi.state = STATE_CONNECTED;
 					DBG("ESP8266 IP: ");
 					DBG(wifi.ip);
 					DBG("\r\n");
@@ -645,6 +644,8 @@ void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialR
 		}
 		break;
 	}
+
+	//DBG(state);
 }
 
 boolean ESP8266::bufferFind(char keywords[][16]) {

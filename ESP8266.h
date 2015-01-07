@@ -134,7 +134,7 @@ protected:
 	unsigned long ipWatchdogTimestamp;
 	void ipWatchdog(void);
 	void fetchIP(void);
-	static void postFetchIP(uint8_t serialResponseStatus);
+	static void PostFetchIP(uint8_t serialResponseStatus);
 
 
 			int ReceiveMessage(char *buf);
