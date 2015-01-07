@@ -25,12 +25,19 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 
 boolean ESP8266::begin(void)
 {
-	DebugSerial.begin(DEBUG_BAUD_RATE);
+	//DebugSerial.begin(DEBUG_BAUD_RATE);
+
+	pinMode(ESP8266_RST, OUTPUT);
+	digitalWrite(ESP8266_RST, LOW);
+	delay(500);
+	digitalWrite(ESP8266_RST, HIGH);
+	delay(500);
 
 	_wifi.begin(ESP8266_BAUD_RATE);
 	_wifi.flush();
 	_wifi.setTimeout(ESP8266_SERIAL_TIMEOUT);
-	_wifi.println("AT+RST");
+	//_wifi.println("AT+RST");
+	delay(500);
 	state = STATE_IDLE;
 
 	SoftReset();
@@ -172,8 +179,9 @@ void ESP8266::SoftReset(void)
 	state = STATE_RESETING;
     _wifi.println("AT+RST");
 
-	char trueKeywords[][10] = { "ready" };
-	readResponse(5000, PostSoftReset, trueKeywords);
+	setResponseTrueKeywords("ready");
+	setResponseFalseKeywords();
+	readResponse(5000, PostSoftReset);
 	/*
 	
 	unsigned long start;
@@ -588,7 +596,7 @@ String ESP8266::showIP(void)
 }
 
 
-void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialResponseStatus), char(*keywordsTrue)[10], char(*keywordsFalse)[10]) {
+void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialResponseStatus)) {
 	switch (state) {
 		case STATE_IDLE:
 		case STATE_CONNECTED:
@@ -597,19 +605,18 @@ void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialR
 			serialResponseTimestamp = currentTimestamp;
 			serialResponseTimeout = timeout;
 			serialResponseHandler = handler;
-			serialResponseKeywordsTrue = keywordsTrue;
-			serialResponseKeywordsFalse = keywordsFalse;
-			rxBuffer[0] = 0;
+			strcpy(rxBuffer, "");
 			break;
 
 		case STATE_RECIVING_DATA:
-			if ((currentTimestamp - serialResponseTimestamp) > serialResponseTimeout || (bufferFind(serialResponseKeywordsTrue) || bufferFind(serialResponseKeywordsFalse))) {
+			if ((currentTimestamp - serialResponseTimestamp) > serialResponseTimeout || (bufferFind(responseTrueKeywords) || bufferFind(responseFalseKeywords))) {
 				state = STATE_CONNECTED;
-				if (bufferFind(serialResponseKeywordsTrue)){
+				Serial.println("timeout or found");
+				if (bufferFind(responseTrueKeywords)){
 					handler(SERIAL_RESPONSE_TRUE);
 					Serial.println("serial true");
 				}
-				else if (bufferFind(serialResponseKeywordsFalse)){
+				else if (bufferFind(responseFalseKeywords)){
 					handler(SERIAL_RESPONSE_FALSE);
 					Serial.println("serial false");
 				}
@@ -621,31 +628,42 @@ void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialR
 			else {
 				while (_wifi.available()>0)
 				{
-					strcat(rxBuffer, (const char*)_wifi.read());
+					rxBuffer[strlen(rxBuffer)] = _wifi.read();
 				}
 			}
 			break;
 	}
 }
 
-boolean ESP8266::bufferFind(char(*keywords)[10]) {
-	if (*keywords == NULL) return false;
-	//Serial.println(sizeof(*keywords));
-	for (int i = 0; i < sizeof(*keywords); i++) {
-		//Serial.println(i);
-		if (strstr(rxBuffer, keywords[i]))
-			return true;
+boolean ESP8266::bufferFind(char keywords[][16]) {
+	for (int i = 0; i < 3; i++) {
+		if (strlen(keywords[i]) > 0) {
+			if (strstr(rxBuffer, keywords[i]) != NULL) {
+				return true;
+			}
+		}
 	}
 	return false;
+}
+
+
+void ESP8266::setResponseTrueKeywords(char w1[], char w2[], char w3[]) {
+	strncpy(responseTrueKeywords[0], w1, 16);
+	strncpy(responseTrueKeywords[1], w2, 16);
+	strncpy(responseTrueKeywords[2], w3, 16);
+}
+void ESP8266::setResponseFalseKeywords(char w1[], char w2[], char w3[]) {
+	strncpy(responseFalseKeywords[0], w1, 16);
+	strncpy(responseFalseKeywords[1], w2, 16);
+	strncpy(responseFalseKeywords[2], w3, 16);
 }
 
 void ESP8266::update()
 {
 	currentTimestamp = millis();
-	Serial.println(state);
 	switch (state) {
 		case STATE_RECIVING_DATA:
-			readResponse(serialResponseTimestamp, serialResponseHandler, serialResponseKeywordsTrue, serialResponseKeywordsFalse);
+			readResponse(serialResponseTimestamp, serialResponseHandler);
 			break;
 		case STATE_IDLE:
 			
