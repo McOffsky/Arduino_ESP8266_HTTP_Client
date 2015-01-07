@@ -71,9 +71,11 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 
 #define STATE_IDLE			0
 #define STATE_CONNECTED		1
-#define STATE_RESETING		3
-#define STATE_SENDING_DATA	4
-#define STATE_RECIVING_DATA	5
+#define STATE_CONN_LOST		2
+#define STATE_ERROR			3
+#define STATE_RESETING		4
+#define STATE_SENDING_DATA	5
+#define STATE_RECIVING_DATA	6
 
 #define SOCKET_CONNECTED	0
 #define SOCKET_DISCONNECTED	1
@@ -95,7 +97,8 @@ class ESP8266
 	int ReceiveMessage(char *buf);
 	
     /*=================WIFI Function Command=================*/
-	bool confMode(byte a);   //set the working mode of module
+	void confMode(byte a);   //set the working mode of module
+	static void PostConfMode(uint8_t serialResponseStatus);
 	boolean confJAP(String ssid , String pwd);    //set the name and password of wifi 
 	
     String showAP(void);   //show the list of wifi hotspot
@@ -103,7 +106,8 @@ class ESP8266
     boolean quitAP(void);    //quit the connection of current wifi
 
     /*================TCP/IP commands================*/
-    boolean confConnection();    //set the connection mode(sigle:0 or multiple:1)
+	void confConnection(boolean mode);    //set the connection mode(sigle:0 or multiple:1)
+	static void PostConfConnection(uint8_t serialResponseStatus);
 	boolean newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
 	void closeConnection(void);   //close tcp or udp (sigle connection mode)
     String showIP(void);    //show the current ip address
@@ -114,9 +118,9 @@ class ESP8266
 
 	boolean Send(String str);  //send data in sigle connection mode
 
-	void SoftReset(void);    //reset the module AT+RST
+	void softReset(void);    //reset the module AT+RST
 	static void PostSoftReset(uint8_t serialResponseStatus);
-	void HardReset(void);    //reset the module with RST pin
+	void hardReset(void);    //reset the module with RST pin
 
 	void setOnDataRecived(void(*handler)());
 	void setOnWifiConnected(void(*handler)());
@@ -128,6 +132,7 @@ class ESP8266
 
   protected:
 	char rxBuffer[SERIAL_RX_BUFFER_SIZE];
+	uint16_t rxBufferCursor;
 
 	unsigned long currentTimestamp;
 	String ssid;
