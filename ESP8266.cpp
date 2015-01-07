@@ -25,49 +25,30 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 
 boolean ESP8266::begin(void)
 {
+	connected = false;
 	pinMode(ESP8266_RST, OUTPUT);
 	hardReset();
-
+	ipWatchdogTimestamp = 0;
+	
 	DebugSerial.begin(DEBUG_BAUD_RATE);
-	_wifi.begin(ESP8266_BAUD_RATE);
-	_wifi.flush();
-	_wifi.setTimeout(ESP8266_SERIAL_TIMEOUT);
+	_wifiSerial.begin(ESP8266_BAUD_RATE);
+	_wifiSerial.flush();
+	_wifiSerial.setTimeout(ESP8266_SERIAL_TIMEOUT);
 	state = STATE_IDLE;
 
 	softReset();
 }
 
 
-/*************************************************************************
-//Initialize port
-
-	mode:	setting operation mode
-		STA: 	Station
-		AP:	 	Access Point
-		AT_STA:	Access Point & Station
-
-	chl:	channel number
-	ecn:	encryption
-		OPEN          0
-		WEP           1
-		WAP_PSK       2
-		WAP2_PSK      3
-		WAP_WAP2_PSK  4		
-
-	return:
-		true	-	successfully
-		false	-	unsuccessfully
-
-***************************************************************************/
-bool ESP8266::Initialize(String _ssid, String _pwd)
-{
-	ssid = _ssid;
-	pwd = _pwd;
-
-	confJAP(ssid, pwd);
-	
-	return true;
+boolean ESP8266::isConnected() {
+	if (connected && strlen(ip) > 6) {
+		return true;
+	}
+	else {
+		return false;
+	}
 }
+
 
 /*************************************************************************
 //receive message from wifi
@@ -85,20 +66,20 @@ int ESP8266::ReceiveMessage(char *buf)
 	//+IPD,<len>:<data>
 	//+IPD,<id>,<len>:<data>
 	String data = "";
-	if (_wifi.available()>0)
+	if (_wifiSerial.available()>0)
 	{
 		
 		unsigned long start;
 		start = millis();
-		char c0 = _wifi.read();
+		char c0 = _wifiSerial.read();
 		if (c0 == '+')
 		{
 			
 			while (millis()-start<5000) 
 			{
-				if (_wifi.available()>0)
+				if (_wifiSerial.available()>0)
 				{
-					char c = _wifi.read();
+					char c = _wifiSerial.read();
 					data += c;
 				}
 				if (data.indexOf("\nOK")!=-1)
@@ -164,7 +145,7 @@ int ESP8266::ReceiveMessage(char *buf)
 void ESP8266::softReset(void)
 {
 	state = STATE_RESETING;
-    _wifi.println("AT+RST");
+    _wifiSerial.println("AT+RST");
 
 	setResponseTrueKeywords("ready");
 	setResponseFalseKeywords();
@@ -174,8 +155,8 @@ void ESP8266::PostSoftReset(uint8_t serialResponseStatus)
 {
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
 		wifi.state = STATE_RESETING;
-		wifi.confConnection(0);
 		DBG("ESP8266 is ready \r\n");
+		wifi.confConnection(0);
 	}
 	else {
 		DBG("ESP8266 is not responding! \r\n");
@@ -203,6 +184,34 @@ void ESP8266::hardReset(void)
  */
 
 /*************************************************************************
+//configure the current connection mode (single / multiple)
+return:
+true	-	successfully
+false	-	unsuccessfully
+***************************************************************************/
+void ESP8266::confConnection(boolean mode)
+{
+	_wifiSerial.print("AT+CIPMUX=");
+	_wifiSerial.println(mode);
+
+	setResponseTrueKeywords("OK");
+	setResponseFalseKeywords();
+	readResponse(3000, PostConfConnection);
+
+}
+void ESP8266::PostConfConnection(uint8_t serialResponseStatus) {
+	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
+		DBG("ESP8266 connection mode OK \r\n");
+		wifi.state = STATE_RESETING;
+		wifi.confMode(STA);
+	}
+	else {
+		wifi.state = STATE_ERROR;
+		DBG("ESP8266 connection mode ERROR  \r\n");
+	}
+}
+
+/*************************************************************************
 //configure the operation mode
 
 	a:	
@@ -217,8 +226,8 @@ void ESP8266::hardReset(void)
 ***************************************************************************/
 void ESP8266::confMode(byte a)
 {
-     _wifi.print("AT+CWMODE=");  
-	 _wifi.println(a);
+     _wifiSerial.print("AT+CWMODE=");  
+	 _wifiSerial.println(a);
 
 	 setResponseTrueKeywords("Ok", "no change");
 	 setResponseFalseKeywords("ERROR", "busy");
@@ -227,8 +236,8 @@ void ESP8266::confMode(byte a)
 void ESP8266::PostConfMode(uint8_t serialResponseStatus)
 {
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		wifi.state = STATE_IDLE;
 		DBG("ESP8266 wifi mode setted \r\n");
+		wifi.state = STATE_IDLE;
 	}
 	else {
 		DBG("ESP8266 error! \r\n");
@@ -237,88 +246,39 @@ void ESP8266::PostConfMode(uint8_t serialResponseStatus)
 }
 
 /*************************************************************************
-//show the list of wifi hotspot
-		
-	return:	string of wifi information
-		encryption,SSID,RSSI
-		
+//Initialize port
+
 
 ***************************************************************************/
-String ESP8266::showAP(void)
+void ESP8266::connect(char _ssid[], char _pwd[])
 {
-    String data;
-	_wifi.flush();
-    _wifi.print("AT+CWLAP\r\n");  
-
-
-	delay(1000);
-	while(1);
-    unsigned long start;
-	start = millis();
-    while (millis()-start<8000) {
-		if(_wifi.available()>0)
-		{
-			char a =_wifi.read();
-			data=data+a;
-		}
-		if (data.indexOf("OK")!=-1 || data.indexOf("ERROR")!=-1 )
-		{
-			break;
-		}
-	}
-
-    if(data.indexOf("ERROR")!=-1)
-    {
-        return "ERROR";
-    } else {
-       char head[4] = {0x0D,0x0A};   
-       char tail[7] = {0x0D,0x0A,0x0D,0x0A};        
-       data.replace("AT+CWLAP","");
-       data.replace("OK","");
-       data.replace("+CWLAP","WIFI");
-       data.replace(tail,"");
-	   data.replace(head,"");
-
-        return data;
-    }
- }
-
-/*************************************************************************
-//show the name of current wifi access port
-		
-	return:	string of access port name
-		AP:<SSID>
-		
-
-***************************************************************************/
-String ESP8266::showJAP(void)
-{
-	_wifi.flush();
-    _wifi.println("AT+CWJAP?");  
-      String data;
-	  unsigned long start;
-	start = millis();
-    while (millis()-start<3000) {
-       if(_wifi.available()>0)
-       {
-       char a =_wifi.read();
-       data=data+a;
-       }
-       if (data.indexOf("OK")!=-1 || data.indexOf("ERROR")!=-1 )
-       {
-           break;
-       }
-    }
-      char head[4] = {0x0D,0x0A};   
-      char tail[7] = {0x0D,0x0A,0x0D,0x0A};        
-      data.replace("AT+CWJAP?","");
-      data.replace("+CWJAP","AP");
-      data.replace("OK","");
-	  data.replace(tail,"");
-      data.replace(head,"");
-      
-          return data;
+	ssid = _ssid;
+	pwd = _pwd;
+	autoconnect = true;
 }
+
+
+void ESP8266::disconnect()
+{
+	autoconnect = false;
+	_wifiSerial.println("AT+CWQAP");
+	setResponseTrueKeywords("OK");
+	setResponseFalseKeywords();
+	readResponse(3000, PostDisconnect);
+}
+
+
+void ESP8266::PostDisconnect(uint8_t serialResponseStatus) {
+	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
+		wifi.state = STATE_IDLE;
+		wifi.connected = false;
+		wifi.ip[0] = '\0';
+	}
+	else {
+		DBG("ESP8266 disconnecting error\r\n");
+	}
+}
+
 
 /*************************************************************************
 //configure the SSID and password of the access port
@@ -329,32 +289,38 @@ String ESP8266::showJAP(void)
 		
 
 ***************************************************************************/
-boolean ESP8266::confJAP(String ssid, String pwd)
-{
-	
-    _wifi.print("AT+CWJAP=");
-    _wifi.print("\"");     //"ssid"
-    _wifi.print(ssid);
-    _wifi.print("\"");
+boolean ESP8266::confJAP(char ssid[], char pwd[])
+{	
+    _wifiSerial.print("AT+CWJAP=\"");
+    _wifiSerial.print(ssid);
+    _wifiSerial.print("\",\"");   
+    _wifiSerial.print(pwd);
+    _wifiSerial.println("\"");
 
-    _wifi.print(",");
-
-    _wifi.print("\"");      //"pwd"
-    _wifi.print(pwd);
-    _wifi.println("\"");
-
-
-    unsigned long start;
-	start = millis();
-    while (millis()-start<3000) {                            
-        if(_wifi.find("OK")==true)
-        {
-		   return true;
-           
-        }
-    }
-	return false;
+	setResponseTrueKeywords("OK");
+	setResponseFalseKeywords("FAIL");
+	readResponse(10000, PostConfJAP);
 }
+void ESP8266::PostConfJAP(uint8_t serialResponseStatus) {
+	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
+		wifi.state = STATE_CONNECTED;
+		wifi.connected = true;
+		DBG("ESP8266 connected to wifi \r\n");
+		wifi.ipWatchdog();
+	}
+	else if (serialResponseStatus == SERIAL_RESPONSE_FALSE) {
+		wifi.state = STATE_ERROR;
+		DBG("ESP8266 wrong password \r\n");
+	}
+	else {
+		wifi.connected = false;
+		wifi.state = STATE_IDLE;
+		DBG("ESP8266 connection timeout \r\n");
+	}
+}
+
+
+
 
 /*************************************************************************
 //quite the access port
@@ -367,11 +333,10 @@ boolean ESP8266::confJAP(String ssid, String pwd)
 ***************************************************************************/
 boolean ESP8266::quitAP(void)
 {
-    _wifi.println("AT+CWQAP");
     unsigned long start;
 	start = millis();
     while (millis()-start<3000) {                            
-        if(_wifi.find("OK")==true)
+        if(_wifiSerial.find("OK")==true)
         {
 		   return true;
            
@@ -381,6 +346,90 @@ boolean ESP8266::quitAP(void)
 
 }
 
+/*************************************************************************
+//show the list of wifi hotspot
+
+return:	string of wifi information
+encryption,SSID,RSSI
+
+
+***************************************************************************/
+String ESP8266::showAP(void)
+{
+	String data;
+	_wifiSerial.flush();
+	_wifiSerial.print("AT+CWLAP\r\n");
+
+
+	delay(1000);
+	while (1);
+	unsigned long start;
+	start = millis();
+	while (millis() - start<8000) {
+		if (_wifiSerial.available()>0)
+		{
+			char a = _wifiSerial.read();
+			data = data + a;
+		}
+		if (data.indexOf("OK") != -1 || data.indexOf("ERROR") != -1)
+		{
+			break;
+		}
+	}
+
+	if (data.indexOf("ERROR") != -1)
+	{
+		return "ERROR";
+	}
+	else {
+		char head[4] = { 0x0D, 0x0A };
+		char tail[7] = { 0x0D, 0x0A, 0x0D, 0x0A };
+		data.replace("AT+CWLAP", "");
+		data.replace("OK", "");
+		data.replace("+CWLAP", "WIFI");
+		data.replace(tail, "");
+		data.replace(head, "");
+
+		return data;
+	}
+}
+
+/*************************************************************************
+//show the name of current wifi access port
+
+return:	string of access port name
+AP:<SSID>
+
+
+***************************************************************************/
+String ESP8266::showJAP(void)
+{
+	_wifiSerial.flush();
+	_wifiSerial.println("AT+CWJAP?");
+	String data;
+	unsigned long start;
+	start = millis();
+	while (millis() - start<3000) {
+		if (_wifiSerial.available()>0)
+		{
+			char a = _wifiSerial.read();
+			data = data + a;
+		}
+		if (data.indexOf("OK") != -1 || data.indexOf("ERROR") != -1)
+		{
+			break;
+		}
+	}
+	char head[4] = { 0x0D, 0x0A };
+	char tail[7] = { 0x0D, 0x0A, 0x0D, 0x0A };
+	data.replace("AT+CWJAP?", "");
+	data.replace("+CWJAP", "AP");
+	data.replace("OK", "");
+	data.replace(tail, "");
+	data.replace(head, "");
+
+	return data;
+}
 
 /*********************************************
  *********************************************
@@ -390,34 +439,6 @@ boolean ESP8266::quitAP(void)
  *********************************************
  *********************************************
  */
-
-/*************************************************************************
-//configure the current connection mode (single)
-	return:
-		true	-	successfully
-		false	-	unsuccessfully
-***************************************************************************/
-void ESP8266::confConnection(boolean mode)
-{
-	_wifi.print("AT+CIPMUX=");
-	_wifi.println(mode);
-
-	setResponseTrueKeywords("OK");
-	setResponseFalseKeywords();
-	readResponse(3000, PostConfConnection);
-
-}
-void ESP8266::PostConfConnection(uint8_t serialResponseStatus) {
-	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		wifi.state = STATE_RESETING;
-		DBG("ESP8266 connection mode OK \r\n");
-		wifi.confMode(STA);
-	}
-	else {
-		wifi.state = STATE_ERROR;
-		DBG("ESP8266 connection mode ERROR  \r\n");
-	}
-}
 
 /*************************************************************************
 //Set up tcp connection	(signle connection mode)
@@ -435,17 +456,17 @@ boolean ESP8266::newConnection(String addr, int port)
 
 {
     String data;
-    _wifi.print("AT+CIPSTART=\"TCP\",\"");
-    _wifi.print(addr);
-    _wifi.print("\",");
-    _wifi.println(String(port));
+    _wifiSerial.print("AT+CIPSTART=\"TCP\",\"");
+    _wifiSerial.print(addr);
+    _wifiSerial.print("\",");
+    _wifiSerial.println(String(port));
 
     unsigned long start;
 	start = millis();
 	while (millis()-start<3000) { 
-		 if(_wifi.available()>0)
+		 if(_wifiSerial.available()>0)
 		 {
-		 char a =_wifi.read();
+		 char a =_wifiSerial.read();
 		 data=data+a;
 		 }
 		 if (data.indexOf("OK")!=-1 || data.indexOf("ALREAY CONNECT")!=-1 || data.indexOf("ERROR")!=-1)
@@ -469,8 +490,8 @@ boolean ESP8266::newConnection(String addr, int port)
 ***************************************************************************/
 boolean ESP8266::Send(String str)
 {
-    _wifi.print("AT+CIPSEND=");
-    _wifi.println(str.length());
+    _wifiSerial.print("AT+CIPSEND=");
+    _wifiSerial.println(str.length());
 
 
 
@@ -478,14 +499,14 @@ boolean ESP8266::Send(String str)
 	start = millis();
 	bool found;
 	while (millis()-start<5000) {                            
-        if(_wifi.find(">")==true )
+        if(_wifiSerial.find(">")==true )
         {
 			found = true;
            break;
         }
      }
 	if(found)
-		_wifi.print(str);
+		_wifiSerial.print(str);
 	else
 	{
 		closeConnection();
@@ -496,9 +517,9 @@ boolean ESP8266::Send(String str)
     String data;
     start = millis();
 	while (millis()-start<5000) {
-     if(_wifi.available()>0)
+     if(_wifiSerial.available()>0)
      {
-     char a =_wifi.read();
+     char a =_wifiSerial.read();
      data=data+a;
      }
      if (data.indexOf("SEND OK")!=-1)
@@ -516,15 +537,15 @@ boolean ESP8266::Send(String str)
 ***************************************************************************/
 void ESP8266::closeConnection(void)
 {
-    _wifi.println("AT+CIPCLOSE");
+    _wifiSerial.println("AT+CIPCLOSE");
 
     String data;
     unsigned long start;
 	start = millis();
 while (millis() - start < 3000) {
-	if (_wifi.available() > 0)
+	if (_wifiSerial.available() > 0)
 	{
-		char a = _wifi.read();
+		char a = _wifiSerial.read();
 		data = data + a;
 	}
 	if (data.indexOf("Linked") != -1 || data.indexOf("ERROR") != -1 || data.indexOf("we must restart") != -1)
@@ -540,43 +561,50 @@ while (millis() - start < 3000) {
 return:	string of ip address
 
 ***************************************************************************/
-String ESP8266::showIP(void)
+void ESP8266::ipWatchdog(void)
 {
-	String data;
-	unsigned long start;
-	//DBG("AT+CIFSR\r\n");
-	for (int a = 0; a < 3; a++)
-	{
-		_wifi.println("AT+CIFSR");
-		start = millis();
-		while (millis() - start < 3000) {
-			while (_wifi.available() > 0)
-			{
-				char a = _wifi.read();
-				data = data + a;
-			}
-			if (data.indexOf("AT+CIFSR") != -1)
-			{
-				break;
-			}
-		}
-		if (data.indexOf(".") != -1)
-		{
-			break;
-		}
-		data = "";
+	if ((currentTimestamp - ipWatchdogTimestamp) > ESP8266_IP_WATCHDOG_INTERVAL || ipWatchdogTimestamp == 0 || currentTimestamp < ipWatchdogTimestamp) {
+		ipWatchdogTimestamp = currentTimestamp;
+		fetchIP();
 	}
-	//DBG(data);
-	//DBG("\r\n");
-	char head[4] = { 0x0D, 0x0A };
-	char tail[7] = { 0x0D, 0x0D, 0x0A };
-	data.replace("AT+CIFSR", "");
-	data.replace(tail, "");
-	data.replace(head, "");
+}
+void ESP8266::fetchIP(void)
+{
+	_wifiSerial.println("AT+CIFSR");
 
-	return data;
+	setResponseTrueKeywords("OK");
+	setResponseFalseKeywords();
+	readResponse(3000, postFetchIP);
 }
 
+void ESP8266::postFetchIP(uint8_t serialResponseStatus)
+{
+	char * pch;
+	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
+		if (strlen(wifi.rxBuffer) > 10) {
+			pch = strtok(wifi.rxBuffer, "\n");
+			while (pch != NULL)
+			{
+				if ((uint8_t)'0' < (uint8_t) *pch && (1 + (uint8_t)'9') > (uint8_t)*pch) {
+					strcpy(wifi.ip, pch);
+					pch = NULL;
+
+					DBG("ESP8266 IP: ");
+					DBG(wifi.ip);
+					DBG("\r\n");
+					return;
+				}
+				else {
+					pch = strtok(NULL, "\n");
+				}
+			}
+		}
+	}
+	DBG(wifi.rxBuffer);
+	DBG("\r\nESP8266 no IP \r\n");
+	wifi.connected = false;
+	wifi.state = STATE_IDLE;
+}
 
 void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialResponseStatus)) {
 	switch (state) {
@@ -587,31 +615,33 @@ void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialR
 		serialResponseTimestamp = currentTimestamp;
 		serialResponseTimeout = timeout;
 		serialResponseHandler = handler;
-		strcpy(rxBuffer, "");
-		rxBufferCursor = strlen(rxBuffer);
+		rxBuffer[0] = '\0';
+		rxBufferCursor = 0;
 		break;
 
 	case STATE_RECIVING_DATA:
-		if ((currentTimestamp - serialResponseTimestamp) > serialResponseTimeout || (bufferFind(responseTrueKeywords) || bufferFind(responseFalseKeywords))) {
+		if ((currentTimestamp - serialResponseTimestamp) > serialResponseTimeout || currentTimestamp < serialResponseTimestamp || (bufferFind(responseTrueKeywords) || bufferFind(responseFalseKeywords))) {
+			state = STATE_DATA_RECIVED;
 			if (bufferFind(responseTrueKeywords)) {
-				DBG("serial true \r\n");
+				//DBG("serial true \r\n");
 				handler(SERIAL_RESPONSE_TRUE);				
 			}
 			else if (bufferFind(responseFalseKeywords)) {
-				DBG("serial false \r\n");
+				//DBG("serial false \r\n");
 				handler(SERIAL_RESPONSE_FALSE);
 			}
 			else {
-				DBG("serial timeout \r\n");
+				//DBG("serial timeout \r\n");
 				handler(SERIAL_RESPONSE_TIMEOUT);
 			}
 		}
 		else {
-			while (_wifi.available() > 0)
+			while (_wifiSerial.available() > 0)
 			{
-				rxBuffer[rxBufferCursor] = _wifi.read();
+				rxBuffer[rxBufferCursor] = _wifiSerial.read();
 				rxBufferCursor++;
 			}
+			rxBuffer[rxBufferCursor] = '\0';
 		}
 		break;
 	}
@@ -619,7 +649,7 @@ void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialR
 
 boolean ESP8266::bufferFind(char keywords[][16]) {
 	for (int i = 0; i < 3; i++) {
-		if (keywords[i] != NULL) {
+		if (strlen(keywords[i]) > 0) {
 			if (strstr(rxBuffer, keywords[i]) != NULL) {
 				return true;
 			}
@@ -627,7 +657,6 @@ boolean ESP8266::bufferFind(char keywords[][16]) {
 	}
 	return false;
 }
-
 
 void ESP8266::setResponseTrueKeywords(char w1[], char w2[], char w3[]) {
 	strncpy(responseTrueKeywords[0], w1, 16);
@@ -649,9 +678,14 @@ void ESP8266::update()
 			readResponse(serialResponseTimestamp, serialResponseHandler);
 			break;
 		case STATE_IDLE:
-			
+			if (!connected && autoconnect && ssid != NULL && pwd != NULL) {
+				confJAP(ssid, pwd);
+			}
 			break;
 
+	}
+	if (connected) {
+		ipWatchdog();
 	}
 }
 

@@ -20,6 +20,7 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 #define DEBUG_BAUD_RATE 9600
 
 #define ESP8266_SERIAL_TIMEOUT 3000
+#define ESP8266_IP_WATCHDOG_INTERVAL 30000
 
 #define ESP8266_RST 16 // connected to RST pin on ESP8266
 
@@ -36,12 +37,12 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 
 	extern SoftwareSerial mySerial;
 
-	#define _wifi	Serial
+	#define _wifiSerial	Serial
 	#define DebugSerial	mySerial
 #endif  
 
 #ifdef MEGA
-	#define _wifi	Serial1 
+	#define _wifiSerial	Serial1 
 	#define DebugSerial	Serial
 #endif  
 	
@@ -71,11 +72,12 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 
 #define STATE_IDLE			0
 #define STATE_CONNECTED		1
-#define STATE_CONN_LOST		2
+#define STATE_NOT_CONNECTED	2
 #define STATE_ERROR			3
 #define STATE_RESETING		4
 #define STATE_SENDING_DATA	5
 #define STATE_RECIVING_DATA	6
+#define STATE_DATA_RECIVED	7
 
 #define SOCKET_CONNECTED	0
 #define SOCKET_DISCONNECTED	1
@@ -88,55 +90,33 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 class ESP8266 
 {
   public:
-
-    boolean begin(void);
-	
-	//Initialize port
-	bool Initialize(String ssid, String pwd);
-	
-	int ReceiveMessage(char *buf);
-	
-    /*=================WIFI Function Command=================*/
-	void confMode(byte a);   //set the working mode of module
-	static void PostConfMode(uint8_t serialResponseStatus);
-	boolean confJAP(String ssid , String pwd);    //set the name and password of wifi 
-	
-    String showAP(void);   //show the list of wifi hotspot
-    String showJAP(void);  //show the name of current wifi access port
-    boolean quitAP(void);    //quit the connection of current wifi
-
-    /*================TCP/IP commands================*/
-	void confConnection(boolean mode);    //set the connection mode(sigle:0 or multiple:1)
-	static void PostConfConnection(uint8_t serialResponseStatus);
-	boolean newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
-	void closeConnection(void);   //close tcp or udp (sigle connection mode)
-    String showIP(void);    //show the current ip address
-	
-	String m_rev;
-
+    boolean isConnected();
+	boolean begin(void);
 	void update();
 
-	boolean Send(String str);  //send data in sigle connection mode
+	void connect(char _ssid[], char _pwd[]);
+	void disconnect();
 
 	void softReset(void);    //reset the module AT+RST
-	static void PostSoftReset(uint8_t serialResponseStatus);
-	void hardReset(void);    //reset the module with RST pin
+	void hardReset(void);    //reset the module with RST pin, blocking function!
 
 	void setOnDataRecived(void(*handler)());
 	void setOnWifiConnected(void(*handler)());
 	void setOnWifiDisconnected(void(*handler)());
 	void sendHttpRequest(char *method, char *ipaddr, uint8_t port, char *post, char *get);
 
-	uint8_t state;
 
-
-  protected:
-	char rxBuffer[SERIAL_RX_BUFFER_SIZE];
+protected:
+	boolean connected;
 	uint16_t rxBufferCursor;
+	uint8_t state;
+	char rxBuffer[SERIAL_RX_BUFFER_SIZE];
+	char ip[16];
 
 	unsigned long currentTimestamp;
-	String ssid;
-	String pwd;
+	char *ssid;
+	char *pwd;
+	boolean autoconnect;
 
 	void(*serialResponseHandler)(uint8_t serialResponseStatus);
 	unsigned long serialResponseTimeout;
@@ -149,6 +129,40 @@ class ESP8266
 	void setResponseTrueKeywords(char w1[] = NULL, char w2[] = NULL, char w3[] = NULL);
 	void setResponseFalseKeywords(char w1[] = NULL, char w2[] = NULL, char w3[] = NULL);
 	void readResponse(unsigned long timeout, void(*handler)(uint8_t serialResponseStatus));
+
+
+	unsigned long ipWatchdogTimestamp;
+	void ipWatchdog(void);
+	void fetchIP(void);
+	static void postFetchIP(uint8_t serialResponseStatus);
+
+
+			int ReceiveMessage(char *buf);
+	
+    /*=================WIFI Function Command=================*/
+	static void PostDisconnect(uint8_t serialResponseStatus);
+	static void PostSoftReset(uint8_t serialResponseStatus);
+
+	void confMode(byte a);   //set the working mode of module
+	static void PostConfMode(uint8_t serialResponseStatus);
+	
+	boolean confJAP(char ssid[], char pwd[]);    //set the name and password of wifi 
+	static void PostConfJAP(uint8_t serialResponseStatus);
+	
+			String showAP(void);   //show the list of wifi hotspot
+			String showJAP(void);  //show the name of current wifi access port
+			boolean quitAP(void);    //quit the connection of current wifi
+
+    /*================TCP/IP commands================*/
+	void confConnection(boolean mode);    //set the connection mode(sigle:0 or multiple:1)
+	static void PostConfConnection(uint8_t serialResponseStatus);
+			boolean newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
+			void closeConnection(void);   //close tcp or udp (sigle connection mode)
+	
+			boolean Send(String str);  //send data in sigle connection mode
+
+
+
 };
 
 extern ESP8266 wifi;
