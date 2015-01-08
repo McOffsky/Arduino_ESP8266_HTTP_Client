@@ -93,6 +93,7 @@ class ESP8266
     boolean isConnected();
 	boolean begin(void);
 	void update();
+	char* sendATCommand(char cmd[], char keyword[], unsigned long timeout = 2000);   //show the list of wifi hotspot, blocking function!
 
 	void connect(char _ssid[], char _pwd[]);
 	void disconnect();
@@ -149,9 +150,6 @@ protected:
 	boolean confJAP(char ssid[], char pwd[]);    //set the name and password of wifi 
 	static void PostConfJAP(uint8_t serialResponseStatus);
 	
-			String showAP(void);   //show the list of wifi hotspot
-			String showJAP(void);  //show the name of current wifi access port
-			boolean quitAP(void);    //quit the connection of current wifi
 
     /*================TCP/IP commands================*/
 	void confConnection(boolean mode);    //set the connection mode(sigle:0 or multiple:1)
