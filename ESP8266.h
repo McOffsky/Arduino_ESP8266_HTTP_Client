@@ -22,6 +22,7 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 #define ESP8266_SERIAL_TIMEOUT 3000
 #define ESP8266_IP_WATCHDOG_INTERVAL 30000
 
+#define ESP8266_HARD_RESET_DURACTION 1500
 #define ESP8266_RST 16 // connected to RST pin on ESP8266
 
 //#define UNO			//uncomment this line when you use it with UNO board
@@ -101,10 +102,10 @@ class ESP8266
 	void softReset(void);    //reset the module AT+RST
 	void hardReset(void);    //reset the module with RST pin, blocking function!
 
-	void setOnDataRecived(void(*handler)());
+	void setOnDataRecived(void(*handler)(char data[]));
 	void setOnWifiConnected(void(*handler)());
 	void setOnWifiDisconnected(void(*handler)());
-	void sendHttpRequest(char *method, char *ipaddr, uint8_t port, char *post, char *get);
+	boolean sendHttpRequest(char serverIP[], uint8_t port, char method[], char url[], char postData[] = NULL, char queryData[] = NULL);
 
 
 protected:
@@ -114,14 +115,27 @@ protected:
 	char rxBuffer[SERIAL_RX_BUFFER_SIZE];
 	char ip[16];
 
+	char *serverIP;
+	uint8_t port;
+	char *method;
+	char *url;
+	char *postData;
+	char *queryData;
+
 	unsigned long currentTimestamp;
 	char *ssid;
 	char *pwd;
 	boolean autoconnect;
 
+	void(*wifiConnectedHandler)();
+	void(*wifiDisconnectedHandler)();
+
 	void(*serialResponseHandler)(uint8_t serialResponseStatus);
+
 	unsigned long serialResponseTimeout;
 	unsigned long serialResponseTimestamp;
+	unsigned long lastActivityTimestamp;
+
 	char responseTrueKeywords[3][16];
 	char responseFalseKeywords[3][16];
 
@@ -131,8 +145,13 @@ protected:
 	void setResponseFalseKeywords(char w1[] = NULL, char w2[] = NULL, char w3[] = NULL);
 	void readResponse(unsigned long timeout, void(*handler)(uint8_t serialResponseStatus));
 
+	void connectToServer();
+	static void PostConnectToServer(uint8_t serialResponseStatus);
+	static void connectToServer(uint8_t serialResponseStatus);
+	static void SendData(uint8_t serialResponseStatus);
+	static void ConfirmSend(uint8_t serialResponseStatus);
+	void SendDataLength();
 
-	unsigned long ipWatchdogTimestamp;
 	void ipWatchdog(void);
 	void fetchIP(void);
 	static void PostFetchIP(uint8_t serialResponseStatus);
@@ -150,12 +169,13 @@ protected:
 	boolean confJAP(char ssid[], char pwd[]);    //set the name and password of wifi 
 	static void PostConfJAP(uint8_t serialResponseStatus);
 	
-
+	void runIPCheck();
     /*================TCP/IP commands================*/
 	void confConnection(boolean mode);    //set the connection mode(sigle:0 or multiple:1)
 	static void PostConfConnection(uint8_t serialResponseStatus);
 			boolean newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
 			void closeConnection(void);   //close tcp or udp (sigle connection mode)
+			static void PostCloseConnection(uint8_t serialResponseStatus);
 	
 			boolean Send(String str);  //send data in sigle connection mode
 
