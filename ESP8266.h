@@ -69,7 +69,7 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 #define    AP      2
 #define    AP_STA  3
 
-#define SERIAL_RX_BUFFER_SIZE 256
+#define SERIAL_RX_BUFFER_SIZE 1024
 
 #define STATE_IDLE			0
 #define STATE_CONNECTED		1
@@ -114,6 +114,8 @@ protected:
 	uint8_t state;
 	char rxBuffer[SERIAL_RX_BUFFER_SIZE];
 	char ip[16];
+
+	uint8_t attemptCounter;
 
 	char *serverIP;
 	uint8_t port;
@@ -162,7 +164,7 @@ protected:
     /*=================WIFI Function Command=================*/
 	static void PostDisconnect(uint8_t serialResponseStatus);
 	static void PostSoftReset(uint8_t serialResponseStatus);
-
+	static void ReadIPDHeader(uint8_t serialResponseStatus);
 	void confMode(byte a);   //set the working mode of module
 	static void PostConfMode(uint8_t serialResponseStatus);
 	
