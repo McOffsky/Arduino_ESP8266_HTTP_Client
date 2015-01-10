@@ -161,27 +161,27 @@ protected:
 	static void PostFetchIP(uint8_t serialResponseStatus);
 
 
-			int ReceiveMessage(char *buf);
+	int ReceiveMessage(char *buf);
 	
     /*=================WIFI Function Command=================*/
 	static void PostDisconnect(uint8_t serialResponseStatus);
 	static void PostSoftReset(uint8_t serialResponseStatus);
-	static void ReadIPDHeader(uint8_t serialResponseStatus);
+	static void ReadMessage(uint8_t serialResponseStatus);
 	void confMode(byte a);   //set the working mode of module
 	static void PostConfMode(uint8_t serialResponseStatus);
 	
-	void connectAP(char ssid[], char pwd[]);    //set the name and password of wifi 
+	void connectAP(char _[], char _pwd[]);    //set the name and password of wifi 
 	static void PostConnectAP(uint8_t serialResponseStatus);
 	
 	void runIPCheck();
     /*================TCP/IP commands================*/
 	void confConnection(boolean mode);    //set the connection mode(sigle:0 or multiple:1)
 	static void PostConfConnection(uint8_t serialResponseStatus);
-			void newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
-			void closeConnection(void);   //close tcp or udp (sigle connection mode)
-			static void PostCloseConnection(uint8_t serialResponseStatus);
-			void checkConnection();
-			static void PostCheckConnection(uint8_t serialResponseStatus);
+	void newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
+	void closeConnection(void);   //close tcp or udp (sigle connection mode)
+	static void PostCloseConnection(uint8_t serialResponseStatus);
+	void checkConnection();
+	static void PostCheckConnection(uint8_t serialResponseStatus);
 
 
 
