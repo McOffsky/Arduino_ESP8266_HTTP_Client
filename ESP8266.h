@@ -16,7 +16,7 @@ Based on work by Stan Lee(Lizq@iteadstudio.com). Messed around by Igor Makowski 
 	#include "WProgram.h"
 #endif
 
-#define ESP8266_BAUD_RATE 9600 // change to 115200 if you have old firmare on your esp chip
+#define ESP8266_BAUD_RATE 115200
 #define DEBUG_BAUD_RATE 9600
 
 #define ESP8266_SERIAL_TIMEOUT 3000
@@ -147,6 +147,8 @@ protected:
 	void setResponseFalseKeywords(char w1[] = NULL, char w2[] = NULL, char w3[] = NULL);
 	void readResponse(unsigned long timeout, void(*handler)(uint8_t serialResponseStatus));
 
+	boolean attempt(uint8_t max);
+
 	void connectToServer();
 	static void PostConnectToServer(uint8_t serialResponseStatus);
 	static void connectToServer(uint8_t serialResponseStatus);
@@ -168,18 +170,18 @@ protected:
 	void confMode(byte a);   //set the working mode of module
 	static void PostConfMode(uint8_t serialResponseStatus);
 	
-	boolean confJAP(char ssid[], char pwd[]);    //set the name and password of wifi 
-	static void PostConfJAP(uint8_t serialResponseStatus);
+	void connectAP(char ssid[], char pwd[]);    //set the name and password of wifi 
+	static void PostConnectAP(uint8_t serialResponseStatus);
 	
 	void runIPCheck();
     /*================TCP/IP commands================*/
 	void confConnection(boolean mode);    //set the connection mode(sigle:0 or multiple:1)
 	static void PostConfConnection(uint8_t serialResponseStatus);
-			boolean newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
+			void newConnection(String addr, int port);   //create new tcp or udp connection (sigle connection mode)
 			void closeConnection(void);   //close tcp or udp (sigle connection mode)
 			static void PostCloseConnection(uint8_t serialResponseStatus);
-	
-			boolean Send(String str);  //send data in sigle connection mode
+			void checkConnection();
+			static void PostCheckConnection(uint8_t serialResponseStatus);
 
 
 
