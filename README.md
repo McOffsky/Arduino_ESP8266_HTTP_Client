@@ -1,5 +1,4 @@
 # Arduino ESP8266 HTTP Client library #
-======
 ###### by Igor Makowski (igor.makowski@gmail.com)
 
 Library for simple http communication with webserver. Library during work
@@ -12,39 +11,28 @@ Library has internal static buffer. You need to set up its size according to
 your needs (but keep in mind that only http header can be longer than 300 
 characters).
 
+Bug reports and push request are welcomed :)
+
 Based on work by Stan Lee(Lizq@iteadstudio.com).
 
 # Instructions #
-======
 
 Library was developed with ESP8266 firmware v0.20. Older versions of firmware
 might not work with this lib.  
 
 How to connect and update your ESP8266 is explained in this video: 
+
 https://www.youtube.com/watch?v=9QZkCQSHnko
 
-For best perfomance you will need connect not only 3.3V, GND, TX and RX, but
+For best performance you will need connect not only 3.3V, GND, TX and RX, but
 also RST pin on your ESP8266, but it is not required.
 
-### Code
-(under development)
-- include lib ( #include <ESP8266.h> )
-- in setup() run: 
-	wifi.begin();
-	wifi.connect("ssid", "password");
-	
-- setup handlers 
-	wifi.setOnDataRecived(your_handler);	  //(int code, char data[])
-	wifi.setOnWifiConnected(your_handler);    //()
-	wifi.setOnWifiDisconnected(your_handler); //()
+Header file (.h) needs to be edited according to your hardware specs. If you have UNO board uncomment "define UNO" (board with only one hardware serial). In case you are using MEGA board uncomment "define MEGA" line. Also set up desired buffer size.
 
-- in loop run wifi.update() as often as you can
+Take a look at example sketch included in this lib. Yes, using this lib is that simple.
 
-- to perform request call 
-	wifi.sendHttpRequest(char serverIpOrUrl[], uint8_t port, char method[], char query_url[], char postData[] = NULL, char queryData[] = NULL);
 	
 # License #
-======
 The MIT License (MIT)
 
 Copyright (c) 2015 Igor Makowski
