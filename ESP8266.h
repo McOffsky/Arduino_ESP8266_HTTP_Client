@@ -4,14 +4,15 @@
 *
 * by Igor Makowski (igor.makowski@gmail.com)
 *
-* Library for simple http communication with webserver. Library during work does
-* not block work of your program, does not use memory eating String lib and
-* handles most of ESP8266 errors automatic. Just set up handlers, connect to AP
-* and play with it. Ideal for JSON based applications.
+* Library for simple http communication with webserver. Library during work
+* does not block work of your program (no delay() is used!), does not use
+* memory-expensive String lib and handles most of ESP8266 errors automatic.
+* Just set handlers, connect to AP and play with it. Ideal for JSON based
+* applications.
 *
 * Library has internal static buffer. You need to set up its size according to
-* your needs (but keep in mind that only http header can has more than 300
-* characters).
+* your needs (but keep in mind that only http header of response can be longer
+* than 300 characters).
 *
 * Based on work by Stan Lee(Lizq@iteadstudio.com).
 *
@@ -49,20 +50,24 @@
 	#include "WProgram.h"
 #endif
 
-#define ESP8266_BAUD_RATE 115200
+#define ESP8266_BAUD_RATE 115200 //baud rate of your module, bigger == better
 #define DEBUG_BAUD_RATE 9600
 
-#define ESP8266_SERIAL_TIMEOUT 3000
-#define ESP8266_IP_WATCHDOG_INTERVAL 30000
+#define ESP8266_IP_WATCHDOG_INTERVAL 30000 //time between ip (connection status) checks
 
 #define ESP8266_HARD_RESET_DURACTION 1500
 #define ESP8266_RST 16 // connected to RST pin on ESP8266
 
+// comment to hide debug serial output
+#define DEBUG
+
+// internal buffer size 
+#define SERIAL_RX_BUFFER_SIZE 1024
+
 //#define UNO			//uncomment this line when you use it with UNO board
 #define MEGA		//uncomment this line when you use it with MEGA board
 
-#define DEBUG
-
+// UNO board settings. Hardware serial is used for communication with ESP8266, Software for your pc.
 #ifdef UNO
 	#include <SoftwareSerial.h>
 
@@ -75,35 +80,22 @@
 	#define DebugSerial	mySerial
 #endif  
 
+// MEGA board has multiple hardware serials, so both pc and ESP8266 can be connected via hardware serial
 #ifdef MEGA
 	#define _wifiSerial	Serial1 
 	#define DebugSerial	Serial
 #endif  
 	
 
-//The way of encrypstion
-#define    OPEN          0
-#define    WEP           1
-#define    WAP_PSK       2
-#define    WAP2_PSK      3
-#define    WAP_WAP2_PSK  4
 
-//Communication mode 
-#define    TCP     1
-#define    tcp     1
-#define    UDP     0
-#define    udp     0
 
-#define    OPEN    1
-#define    CLOSE   0
-
-//The type of initialized WIFI
+// type of initialized WIFI
 #define    STA     1
 #define    AP      2
 #define    AP_STA  3
 
-#define SERIAL_RX_BUFFER_SIZE 1024
 
+// library states (library works like a simple FSM
 #define STATE_IDLE			0
 #define STATE_CONNECTED		1
 #define STATE_NOT_CONNECTED	2
@@ -113,9 +105,7 @@
 #define STATE_RECIVING_DATA	6
 #define STATE_DATA_RECIVED	7
 
-#define SOCKET_CONNECTED	0
-#define SOCKET_DISCONNECTED	1
-
+// parameter used for communication with handlers
 #define SERIAL_RESPONSE_FALSE	0
 #define SERIAL_RESPONSE_TRUE	1
 #define SERIAL_RESPONSE_TIMEOUT	2
@@ -124,23 +114,33 @@
 class ESP8266 
 {
   public:
-    boolean isConnected();
-
+	// init lib
 	boolean begin(void);
 
+	// update function status, read buffer, change states, invoke handlers and much more.
+	// this method is main engine of this lib, call as often as you can
 	void update();
 
-	char* sendATCommand(char cmd[], char keyword[], unsigned long timeout = 2000);   //show the list of wifi hotspot, blocking function!
+	// returns ture when is connected to WIFI and has IP address
+	boolean isConnected();
+	
+	// method for AT commands not handled yet by this lib 
+	char* sendATCommand(char cmd[], char keyword[], unsigned long timeout = 2000);
+	
 
 
-
+	// set wifi ssid and password and start trying to connect with it
 	void connect(char _ssid[], char _pwd[]);
 
+	// tell ESP8266 to disconnect and stop reconnect attempts
 	void disconnect();
 
+	// set handler invoked when wifi is connected for first time after being disconnected
 	void setOnWifiConnected(void(*handler)());
 
+	// set handler invoked when wifi is disconnected by user
 	void setOnWifiDisconnected(void(*handler)());
+	
 
 
 	// reset the module AT+RST, after reset chip is seted as wifi client and connection mode single
@@ -150,6 +150,7 @@ class ESP8266
 	void hardReset(void);    
 
 	
+
 	// send http request to server
 	boolean sendHttpRequest(char serverIP[], uint8_t port, char method[], char url[], char postData[] = NULL, char queryData[] = NULL);
 
@@ -218,8 +219,8 @@ protected:
 	// sending request and reciving response procedure
 	void connectToServer();
 	static void PostConnectToServer(uint8_t serialResponseStatus);
-	void checkConnection();
-	static void PostCheckConnection(uint8_t serialResponseStatus);
+	void checkConnection(); // not used, connection status determinated by "ALREADY CONNECTED" response from ESP8266
+	static void PostCheckConnection(uint8_t serialResponseStatus); // not used
 	void SendDataLength();
 	static void SendData(uint8_t serialResponseStatus);
 	static void ConfirmSend(uint8_t serialResponseStatus);
@@ -246,9 +247,9 @@ protected:
 
 	// soft reset procedure. sets up ESP8266 as wifi client and connection mode single
 	static void PostSoftReset(uint8_t serialResponseStatus);
-	void confMode(byte a);
+	void confMode(byte a); // config mode STATION/ACCESPOINT/BOTH
 	static void PostConfMode(uint8_t serialResponseStatus);
-	void confConnection(boolean mode);
+	void confConnection(boolean mode); // config connection mode single/multiple
 	static void PostConfConnection(uint8_t serialResponseStatus);
 };
 

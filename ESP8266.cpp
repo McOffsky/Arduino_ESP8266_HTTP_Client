@@ -4,14 +4,15 @@
 *
 * by Igor Makowski (igor.makowski@gmail.com)
 *
-* Library for simple http communication with webserver. Library during work does
-* not block work of your program, does not use memory eating String lib and
-* handles most of ESP8266 errors automatic. Just set up handlers, connect to AP
-* and play with it. Ideal for JSON based applications.
+* Library for simple http communication with webserver. Library during work
+* does not block work of your program (no delay() is used!), does not use
+* memory-expensive String lib and handles most of ESP8266 errors automatic.
+* Just set handlers, connect to AP and play with it. Ideal for JSON based
+* applications.
 *
 * Library has internal static buffer. You need to set up its size according to
-* your needs (but keep in mind that only http header can has more than 300
-* characters).
+* your needs (but keep in mind that only http header of response can be longer
+* than 300 characters).
 *
 * Based on work by Stan Lee(Lizq@iteadstudio.com).
 *
@@ -39,13 +40,14 @@
 * THE SOFTWARE.
 *
 */
-
 #include "ESP8266.h"
+
 
 
 #ifdef UNO
 	SoftwareSerial mySerial(_DBG_RXPIN_, _DBG_TXPIN_);
 #endif
+
 
 
 #ifdef DEBUG
@@ -55,6 +57,7 @@
 	#define DBG(message)
 	#define DBGW(message)
 #endif
+
 
 
 boolean ESP8266::begin(void)
@@ -507,7 +510,6 @@ boolean ESP8266::lineStartsWith(char* base, char* str) {
 void ESP8266::setOnDataRecived(void(*handler)(int code, char data[])) {
 	dataRecivedHandler = handler;
 }
-
 
 
 

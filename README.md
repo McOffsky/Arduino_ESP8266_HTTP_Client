@@ -1,19 +1,32 @@
 # Arduino ESP8266 HTTP Client library #
+======
+###### by Igor Makowski (igor.makowski@gmail.com)
 
-by Igor Makowski (igor.makowski@gmail.com)
-
-Library for simple http communication with webserver. Library during work does
-not block work of your program, does not use memory eating String lib and
-handles most of ESP8266 errors automatic. Just set up handlers, connect to AP
-and play with it. Ideal for JSON based applications.
+Library for simple http communication with webserver. Library during work
+does not block work of your program (no delay() is used!), does not use
+memory-expensive String lib and handles most of ESP8266 errors automatic.
+Just set handlers, connect to AP and play with it. Ideal for JSON based
+applications.
 
 Library has internal static buffer. You need to set up its size according to
-your needs (but keep in mind that only http header can has more than 300
+your needs (but keep in mind that only http header can be longer than 300 
 characters).
 
 Based on work by Stan Lee(Lizq@iteadstudio.com).
 
 # Instructions #
+======
+
+Library was developed with ESP8266 firmware v0.20. Older versions of firmware
+might not work with this lib.  
+
+How to connect and update your ESP8266 is explained in this video: 
+https://www.youtube.com/watch?v=9QZkCQSHnko
+
+For best perfomance you will need connect not only 3.3V, GND, TX and RX, but
+also RST pin on your ESP8266, but it is not required.
+
+### Code
 (under development)
 - include lib ( #include <ESP8266.h> )
 - in setup() run: 
@@ -31,7 +44,7 @@ Based on work by Stan Lee(Lizq@iteadstudio.com).
 	wifi.sendHttpRequest(char serverIpOrUrl[], uint8_t port, char method[], char query_url[], char postData[] = NULL, char queryData[] = NULL);
 	
 # License #
-
+======
 The MIT License (MIT)
 
 Copyright (c) 2015 Igor Makowski
