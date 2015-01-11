@@ -1,73 +1,58 @@
-# NOT WORKING YET #
+# Arduino ESP8266 HTTP Client library #
 
-# ESP8266 library #
+by Igor Makowski (igor.makowski@gmail.com)
 
-When you use with UNO board, uncomment the follow line in uartWIFI.h.
+Library for simple http communication with webserver. Library during work does
+not block work of your program, does not use memory eating String lib and
+handles most of ESP8266 errors automatic. Just set up handlers, connect to AP
+and play with it. Ideal for JSON based applications.
 
-	#define UNO
+Library has internal static buffer. You need to set up its size according to
+your needs (but keep in mind that only http header can has more than 300
+characters).
 
-When you use with MEGA board, uncomment the follow line in uartWIFI.h.
+Based on work by Stan Lee(Lizq@iteadstudio.com).
 
-	#define MEGA
+# Instructions #
+(under development)
+- include lib ( #include <ESP8266.h> )
+- in setup() run: 
+	wifi.begin();
+	wifi.connect("ssid", "password");
+	
+- setup handlers 
+	wifi.setOnDataRecived(your_handler);	  //(int code, char data[])
+	wifi.setOnWifiConnected(your_handler);    //()
+	wifi.setOnWifiDisconnected(your_handler); //()
 
-## Connection: ##
-When you use it with UNO board, the connection should be like these:
+- in loop run wifi.update() as often as you can
 
-ESP8266_TX->D0
+- to perform request call 
+	wifi.sendHttpRequest(char serverIpOrUrl[], uint8_t port, char method[], char query_url[], char postData[] = NULL, char queryData[] = NULL);
+	
+# License #
 
-ESP8266_RX->D1
+The MIT License (MIT)
 
-ESP8266_CHPD->3.3V
+Copyright (c) 2015 Igor Makowski
 
-ESP8266_VCC->3.3V
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-ESP8266_GND->GND
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-FTDI_RX->D3			//The baud rate of software serial can't be higher that 19200, so we use software serial as a debug port
-
-FTDI_TX->D2
-
-When you use it with MEGA board, the connection should be like these:
-
-ESP8266_TX->RX1(D19)
-
-ESP8266_RX->TX1(D18)
-
-ESP8266_CH_PD->3.3V
-
-ESP8266_VCC->3.3V
-
-ESP8266_GND->GND
-
-When you want to output the debug information, please use DebugSerial. For example,
-
-DebugSerial.println("hello");
-
-## Attention ##
-
-**Note1**:	The size of message from ESP8266 is too big for arduino sometimes, so the library can't receive the whole buffer because  
-the size of the hardware serial buffer which is defined in HardwareSerial.h is too small.
-
-Open the file from \arduino\hardware\arduino\avr\cores\arduino\HardwareSerial.h.
-See the follow line in the HardwareSerial.h file.
-
-	#define SERIAL_BUFFER_SIZE 64
-
-The default size of the buffer is 64. Change it into a bigger number, like 256 or more.
-
-The SRAM size of mega is bigger than UNO's, so it is better to use MEGA board to communicate with ESP8266.
-
-
-**BUG**: When you use this library and receive the http package, it might miss some characters because the library can't process so much data in the same time.
-
-**Created by Stan Lee(Lizq@iteadstudio.com)**
-
-2014/10/8
-
-**Modified version**
-
-V1.0	released the first version of ESP8266 library
-
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 
 
