@@ -25,7 +25,7 @@ How to connect and update your ESP8266 is explained in this video:
 https://www.youtube.com/watch?v=9QZkCQSHnko
 
 For best performance you will need connect not only 3.3V, GND, TX and RX, but
-also RST pin on your ESP8266, but it is not required.
+also RST pin on your ESP8266. It is not required.
 
 Header file (.h) needs to be edited according to your hardware specs. If you have UNO board uncomment "define UNO" (board with only one hardware serial). In case you are using MEGA board uncomment "define MEGA" line. Also set up desired buffer size.
 
