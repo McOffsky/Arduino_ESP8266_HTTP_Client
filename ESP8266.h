@@ -124,7 +124,7 @@ class ESP8266
 	// returns ture when is connected to WIFI and has IP address
 	boolean isConnected();
 	
-	// method for AT commands not handled yet by this lib 
+	// method for AT commands not handled yet by this lib, blocking function!
 	char* sendATCommand(char cmd[], char keyword[], unsigned long timeout = 2000);
 	
 

@@ -26,10 +26,15 @@ void disconnectedHandler() {
 unsigned long currentTimestamp = 0;
 unsigned long httpTimestamp = 0;
 void loop(){
-        wifi.update();
+	currentTimestamp = millis();
+    wifi.update();
+	
 	if (currentTimestamp - httpTimestamp > 10000) {
 		httpTimestamp = currentTimestamp;
 		wifi.sendHttpRequest("example.com", 80, "GET", "/subdir/index.html", "data sended with request", "url_query_data");
 	}
 
+	if (currentTimestamp > 300000) { //disconnect after 5 min
+		wifi.disconnect();
+	}
 }
