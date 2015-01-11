@@ -7,9 +7,9 @@ String lib and handles most of ESP8266 errors by itself.
 Just set handlers, connect to AP and play with it. Ideal for JSON based
 applications.
 
-Library has internal static buffer. You need to set it size according to
-your needs (but keep in mind that only http header can be longer than 300 
-characters).
+Library has internal static buffer. You need to set size of this buffer
+according to your needs (but keep in mind that only http header can be 
+longer than 300 characters).
 
 Bug reports and push request are welcomed :)
 
