@@ -1,13 +1,13 @@
 # Arduino ESP8266 HTTP Client library #
 ###### by Igor Makowski (igor.makowski@gmail.com)
 
-Library for simple http communication with webserver. Library during work
-does not block work of your program (no delay() is used!), does not use
-memory-expensive String lib and handles most of ESP8266 errors automatic.
+Library for simple http communication with webserver. Library does not block
+work of your program (no delay() is used!), does not use memory-expensive
+String lib and handles most of ESP8266 errors by itself.
 Just set handlers, connect to AP and play with it. Ideal for JSON based
 applications.
 
-Library has internal static buffer. You need to set up its size according to
+Library has internal static buffer. You need to set it size according to
 your needs (but keep in mind that only http header can be longer than 300 
 characters).
 
@@ -20,14 +20,14 @@ Based on work by Stan Lee(Lizq@iteadstudio.com).
 Library was developed with ESP8266 firmware v0.20. Older versions of firmware
 might not work with this lib.  
 
-How to connect and update your ESP8266 is explained in this video: 
+How to connect to PC and update your ESP8266 is explained in this video: 
 
 https://www.youtube.com/watch?v=9QZkCQSHnko
 
 For best performance you will need connect not only 3.3V, GND, TX and RX, but
 also RST pin on your ESP8266. It is not required.
 
-Header file (.h) needs to be edited according to your hardware specs. If you have UNO board uncomment "define UNO" (board with only one hardware serial). In case you are using MEGA board uncomment "define MEGA" line. Also set up desired buffer size.
+Header file (.h) needs to be edited according to your hardware specs. If you have UNO board uncomment "define UNO" (board with only one hardware serial). In case you are using MEGA board uncomment "define MEGA" line. Also setup desired buffer size.
 
 Take a look at example sketch included in this lib. Yes, using this lib is that simple.
 
