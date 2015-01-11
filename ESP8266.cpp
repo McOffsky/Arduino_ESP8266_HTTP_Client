@@ -128,7 +128,6 @@ void ESP8266::PostSoftReset(uint8_t serialResponseStatus)
 {
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
 		wifi.state = STATE_RESETING;
-		DBG("ESP8266 is ready \r\n");
 		wifi.confMode(STA);
 	}
 	else {
@@ -157,7 +156,7 @@ void ESP8266::PostConfMode(uint8_t serialResponseStatus)
 {
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
 		//DBG("ESP8266 wifi mode setted \r\n");
-		wifi.state = STATE_IDLE;
+		wifi.state = STATE_RESETING;
 		wifi.confConnection(0);
 	}
 	else {
@@ -179,8 +178,8 @@ void ESP8266::confConnection(boolean mode)
 
 void ESP8266::PostConfConnection(uint8_t serialResponseStatus) {
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		//DBG("ESP8266 connection mode OK \r\n");
-		wifi.state = STATE_RESETING;
+		DBG("ESP8266 is ready \r\n");
+		wifi.state = STATE_IDLE;
 	}
 	else {
 		wifi.state = STATE_ERROR;
