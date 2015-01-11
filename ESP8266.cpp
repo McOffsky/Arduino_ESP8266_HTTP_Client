@@ -56,7 +56,7 @@ boolean ESP8266::isConnected() {
 
 boolean ESP8266::sendHttpRequest(char _serverIP[], uint8_t _port, char _method[], char _url[], char _postData[], char _queryData[]){
 	if (!isConnected() || state == STATE_SENDING_DATA) {
-		DBG("not connected  or busy\r\n");
+		DBG("ESP8266 not connected  or busy\r\n");
 		return false;
 	}
 	serverIP = _serverIP;
@@ -382,7 +382,7 @@ void ESP8266::SendData(uint8_t serialResponseStatus) {
 void ESP8266::ConfirmSend(uint8_t serialResponseStatus) {
 	wifi.state = STATE_CONNECTED;
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		DBG("ESP8266 request sended \r\n");
+		//DBG("ESP8266 request sended \r\n");
 		wifi.setResponseTrueKeywords("\nOK");
 		wifi.setResponseFalseKeywords("ERROR");
 		wifi.readResponse(15000, ReadMessage);
@@ -438,9 +438,44 @@ void ESP8266::ReadMessage(uint8_t serialResponseStatus) {
 }
 
 void ESP8266::processHttpResponse() {
+	char *pch;
+	if (lineStartsWith(rxBuffer, "HTTP")) {
+		// read response code
+		pch = strchr(rxBuffer, ' ');
+		char codeCh[] = { *(pch + 1), *(pch + 2), *(pch + 3) };
+		int code = atoi(codeCh);
 
+		// get response body
+		while (pch != NULL) {
+			if (*(pch + 1) == 13) {
+				pch = pch + 3;
+				break;
+			}
+			else {
+				pch = strchr(pch + 1, '\n');
+			}
+		}
+
+		// unleash the handler!!!
+		if (dataRecivedHandler != NULL) {
+			dataRecivedHandler(code, pch);
+		}
+		else {
+			DBG(pch);
+		}
+	}
 	wifi.state = STATE_CONNECTED;
 }
+
+boolean ESP8266::lineStartsWith(char* base, char* str) {
+	return (strstr(base, str) - base) == 0;
+}
+
+void ESP8266::setOnDataRecived(void(*handler)(int code, char data[])) {
+	dataRecivedHandler = handler;
+}
+
+
 
 
 void ESP8266::closeConnection(void)

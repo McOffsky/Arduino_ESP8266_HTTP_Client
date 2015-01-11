@@ -102,7 +102,7 @@ class ESP8266
 	void softReset(void);    //reset the module AT+RST
 	void hardReset(void);    //reset the module with RST pin, blocking function!
 
-	void setOnDataRecived(void(*handler)(char data[]));
+	void setOnDataRecived(void(*handler)(int code, char data[]));
 	void setOnWifiConnected(void(*handler)());
 	void setOnWifiDisconnected(void(*handler)());
 	boolean sendHttpRequest(char serverIP[], uint8_t port, char method[], char url[], char postData[] = NULL, char queryData[] = NULL);
@@ -131,7 +131,7 @@ protected:
 
 	void(*wifiConnectedHandler)();
 	void(*wifiDisconnectedHandler)();
-
+	void(*dataRecivedHandler)(int code, char data[]);
 	void(*serialResponseHandler)(uint8_t serialResponseStatus);
 
 	unsigned long serialResponseTimeout;
@@ -155,18 +155,18 @@ protected:
 	static void SendData(uint8_t serialResponseStatus);
 	static void ConfirmSend(uint8_t serialResponseStatus);
 	void SendDataLength();
+	void processHttpResponse();
 
 	void ipWatchdog(void);
 	void fetchIP(void);
 	static void PostFetchIP(uint8_t serialResponseStatus);
 
-
-	int ReceiveMessage(char *buf);
 	
     /*=================WIFI Function Command=================*/
 	static void PostDisconnect(uint8_t serialResponseStatus);
 	static void PostSoftReset(uint8_t serialResponseStatus);
 	static void ReadMessage(uint8_t serialResponseStatus);
+	boolean lineStartsWith(char* base, char* str);
 	void confMode(byte a);   //set the working mode of module
 	static void PostConfMode(uint8_t serialResponseStatus);
 	
