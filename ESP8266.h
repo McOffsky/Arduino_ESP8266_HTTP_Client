@@ -110,6 +110,18 @@
 #define SERIAL_RESPONSE_TRUE	1
 #define SERIAL_RESPONSE_TIMEOUT	2
 
+#define METHOD_POST "POST"
+#define METHOD_PUT "PUT"
+#define METHOD_GET "GET"
+#define METHOD_DELETE "DELETE"
+
+#define KEYWORD_OK "\nOK"
+#define KEYWORD_SEND_OK "\nSEND OK"
+#define KEYWORD_READY "\nready"
+#define KEYWORD_ERROR "\nERROR"
+#define KEYWORD_FAIL "\nFAIL"
+#define KEYWORD_ALREAY_CONNECT "\nALREAY CONNECT"
+#define KEYWORD_CURSOR ">"
 
 class ESP8266 
 {
@@ -224,6 +236,7 @@ protected:
 	void SendDataLength();
 	static void SendData(uint8_t serialResponseStatus);
 	static void ConfirmSend(uint8_t serialResponseStatus);
+	void clearRequestData();
 	static void ReadMessage(uint8_t serialResponseStatus);
 	void processHttpResponse();
 
