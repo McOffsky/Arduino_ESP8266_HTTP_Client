@@ -66,6 +66,8 @@ boolean ESP8266::begin(void)
 	pinMode(ESP8266_RST, OUTPUT);
 	hardReset();
 	lastActivityTimestamp = 0;
+	postData = NULL;
+	queryData = NULL;
 
 	DebugSerial.begin(DEBUG_BAUD_RATE);
 	_wifiSerial.begin(ESP8266_BAUD_RATE);
@@ -148,7 +150,7 @@ void ESP8266::confMode(byte a)
 	_wifiSerial.print(F("AT+CWMODE="));
 	_wifiSerial.println(a);
 
-	setResponseTrueKeywords("OK");
+	setResponseTrueKeywords("\nOK");
 	setResponseFalseKeywords("ERROR");
 	readResponse(2000, PostConfMode);
 }
@@ -171,7 +173,7 @@ void ESP8266::confConnection(boolean mode)
 	_wifiSerial.print(F("AT+CIPMUX="));
 	_wifiSerial.println(mode);
 
-	setResponseTrueKeywords("OK");
+	setResponseTrueKeywords("\nOK");
 	setResponseFalseKeywords();
 	readResponse(3000, PostConfConnection);
 
@@ -206,7 +208,7 @@ void ESP8266::connectAP(char _ssid[], char _pwd[])
 	_wifiSerial.print(_pwd);
 	_wifiSerial.println(F("\""));
 
-	setResponseTrueKeywords("OK");
+	setResponseTrueKeywords("\nOK");
 	setResponseFalseKeywords("FAIL");
 	readResponse(10000, PostConnectAP);
 }
@@ -238,7 +240,7 @@ void ESP8266::disconnect()
 {
 	autoconnect = false;
 	_wifiSerial.println(F("AT+CWQAP"));
-	setResponseTrueKeywords("OK");
+	setResponseTrueKeywords("\nOK");
 	setResponseFalseKeywords();
 	readResponse(3000, PostDisconnect);
 }
@@ -272,14 +274,14 @@ void ESP8266::connectToServer() {
 	_wifiSerial.println(port);
 
 	setResponseTrueKeywords("ALREAY CONNECT");
-	setResponseFalseKeywords("ERROR", "OK");
+	setResponseFalseKeywords("ERROR", "\nOK");
 	readResponse(5000, PostConnectToServer);
 }
 
 void ESP8266::PostConnectToServer(uint8_t serialResponseStatus) {
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
 		wifi.state = STATE_SENDING_DATA;
-		//DBG("ESP8266 server connected \r\n");
+		DBG(F("ESP8266 server connected \r\n"));
 		wifi.SendDataLength();
 	}
 	else if (wifi.attempt(6)) {
@@ -332,12 +334,24 @@ void ESP8266::PostCheckConnection(uint8_t serialResponseStatus) {
 void ESP8266::SendDataLength()
 {
 	wifi.state = STATE_SENDING_DATA;
-	int length = strlen(method) + 82 + strlen(url) + strlen(serverIP);
+	int length = 82;
 
-	if (strlen(queryData) > 0) {
+	if (method != NULL) {
+		length = length + strlen(method);
+	}
+
+	if (url != NULL) {
+		length = length + strlen(url);
+	}
+
+	if (serverIP != NULL) {
+		length = length + strlen(serverIP);
+	}
+
+	if (queryData != NULL) {
 		length = length + 3 + strlen(queryData);
 	}
-	if (strlen(postData) > 0) {
+	if (postData != NULL) {
 		length = length + 22 + strlen(postData);
 		if (strlen(postData) > 9) {
 			length++;
@@ -363,14 +377,20 @@ void ESP8266::SendData(uint8_t serialResponseStatus) {
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
 		strcat(wifi.rxBuffer, wifi.method);
 		strcat(wifi.rxBuffer, " ");
+
 		strcat(wifi.rxBuffer, wifi.url);
+
 		if (wifi.queryData != NULL) {
 			strcat(wifi.rxBuffer, "?q=");
 			strcat(wifi.rxBuffer, wifi.queryData);
 		}
 		strcat(wifi.rxBuffer, " HTTP/1.1\r\n");
+
 		strcat(wifi.rxBuffer, "Host: ");
 		strcat(wifi.rxBuffer, wifi.serverIP);
+		//delete wifi.serverIP;
+		//wifi.serverIP = NULL;
+
 		strcat(wifi.rxBuffer, "\r\n");
 		strcat(wifi.rxBuffer, "Connection: close\r\n");
 		strcat(wifi.rxBuffer, "User-Agent: Arduino_ESP8266_HTTP_Client\r\n");
@@ -378,36 +398,35 @@ void ESP8266::SendData(uint8_t serialResponseStatus) {
 		if (wifi.postData != NULL) {
 			strcat(wifi.rxBuffer, "Content-Length: ");
 			char _itoa[5];
-			itoa(strlen(wifi.postData), _itoa, 3);
+			itoa(strlen(wifi.postData), _itoa, 4);
 			strcat(wifi.rxBuffer, _itoa);
+
+			//delete[] _itoa;
 			strcat(wifi.rxBuffer, "\r\n\r\n");
 			strcat(wifi.rxBuffer, wifi.postData);
 			strcat(wifi.rxBuffer, "\r\n");
-		}
 
+			delete[] wifi.postData;
+			wifi.postData = NULL;
+
+		}
 		strcat(wifi.rxBuffer, "\r\n");
 		_wifiSerial.print(wifi.rxBuffer);
+
+		//DBG(F("ESP8266 sending data... \r\n"));
 		//DBG(wifi.rxBuffer);
 		//DBG(strlen(wifi.rxBuffer));
 		//DBG("\r\n");
 		wifi.rxBuffer[0] = '\0';
-
-		wifi.serverIP = NULL;
 		wifi.setResponseTrueKeywords("SEND OK");
 		wifi.setResponseFalseKeywords("ERROR");
-		wifi.readResponse(10000, ConfirmSend);
+		wifi.readResponse(20000, ConfirmSend);
 	}
 	else {
-		if (wifi.attempt(3)) {
-			wifi.SendDataLength();
-			return;
-		}
-		else {
 			wifi.serverIP = NULL;
 			wifi.state = STATE_CONNECTED;
 			DBG(F("ESP8266 cannot send data \r\n"));
 			wifi.closeConnection();
-		}
 	}
 
 	wifi.attemptCounter = 0;
@@ -416,7 +435,7 @@ void ESP8266::SendData(uint8_t serialResponseStatus) {
 void ESP8266::ConfirmSend(uint8_t serialResponseStatus) {
 	wifi.state = STATE_CONNECTED;
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		//DBG("ESP8266 request sended \r\n");
+		DBG("ESP8266 request sended \r\n");
 		wifi.setResponseTrueKeywords("\nOK");
 		wifi.setResponseFalseKeywords("ERROR");
 		wifi.readResponse(30000, ReadMessage);
@@ -515,7 +534,7 @@ void ESP8266::closeConnection(void)
 {
 	wifi.state = STATE_CONNECTED;
 	_wifiSerial.println(F("AT+CIPCLOSE"));
-	setResponseTrueKeywords("OK");
+	setResponseTrueKeywords("\nOK");
 	setResponseFalseKeywords("ERROR");
 	readResponse(10000, PostCloseConnection);
 }
@@ -562,7 +581,7 @@ void ESP8266::fetchIP(void)
 {
 	_wifiSerial.println(F("AT+CIFSR"));
 
-	setResponseTrueKeywords("OK");
+	setResponseTrueKeywords("\nOK");
 	setResponseFalseKeywords("ERROR");
 	readResponse(10000, PostFetchIP);
 }
