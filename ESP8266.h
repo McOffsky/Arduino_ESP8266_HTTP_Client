@@ -62,7 +62,7 @@
 #define DEBUG
 
 // internal buffer size 
-#define SERIAL_RX_BUFFER_SIZE 1024
+#define SERIAL_RX_BUFFER_SIZE 640
 
 //#define UNO			//uncomment this line when you use it with UNO board
 #define MEGA		//uncomment this line when you use it with MEGA board

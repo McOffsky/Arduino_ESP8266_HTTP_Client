@@ -253,7 +253,6 @@ void ESP8266::PostDisconnect(uint8_t serialResponseStatus) {
 		}
 		strcpy(wifi.ip, "");
 		wifi.connected = false;
-		wifi.ip[0] = '\0';
 	}
 	else {
 		DBG(F("ESP8266 disconnecting error\r\n"));
@@ -281,7 +280,7 @@ void ESP8266::connectToServer() {
 void ESP8266::PostConnectToServer(uint8_t serialResponseStatus) {
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
 		wifi.state = STATE_SENDING_DATA;
-		DBG(F("ESP8266 server connected \r\n"));
+		//DBG(F("ESP8266 server connected \r\n"));
 		wifi.SendDataLength();
 	}
 	else if (wifi.attempt(6)) {
@@ -318,7 +317,7 @@ void ESP8266::checkConnection() {
 }
 
 void ESP8266::PostCheckConnection(uint8_t serialResponseStatus) {
-	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
+	if (serialResponseStatus == SERIAL_RESPONSE_TRUE  && strstr(wifi.rxBuffer, "STATUS:3") != NULL) {
 		wifi.state = STATE_SENDING_DATA;
 		//DBG("ESP8266 server connection check OK \r\n");
 		wifi.SendDataLength();
@@ -444,7 +443,6 @@ void ESP8266::ConfirmSend(uint8_t serialResponseStatus) {
 void ESP8266::clearRequestData() {
 	method = NULL;
 	serverIP = NULL;
-	delete[] postData;
 	postData = NULL;
 	queryData = NULL;
 	url = NULL;
@@ -670,18 +668,13 @@ void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialR
 			|| bufferFind(responseFalseKeywords) 
 			|| rxBufferCursor == (SERIAL_RX_BUFFER_SIZE - 1))) {
 			state = STATE_DATA_RECIVED;
-			if (bufferFind(responseTrueKeywords)) {
+			if (bufferFind(responseTrueKeywords) || rxBufferCursor == (SERIAL_RX_BUFFER_SIZE - 1)) {
 				//DBG("serial true \r\n");
 				handler(SERIAL_RESPONSE_TRUE);
 			}
 			else if (bufferFind(responseFalseKeywords)) {
 				//DBG("serial false \r\n");
 				handler(SERIAL_RESPONSE_FALSE);
-			}
-			else if (rxBufferCursor == (SERIAL_RX_BUFFER_SIZE - 1)) {
-				DBG(F("ESP8266 lib buffer overflow \r\n"));
-				state = STATE_CONNECTED;
-				closeConnection();
 			}
 			else {
 				//DBG("serial timeout \r\n");
@@ -696,7 +689,12 @@ void ESP8266::readResponse(unsigned long timeout, void(*handler)(uint8_t serialR
 					rxBufferCursor++;
 				}
 				else {
-					_wifiSerial.flush();
+					DBG(F("ESP8266 lib buffer overflow \r\n"));
+					//empty the wifiSerial buffer
+					while (_wifiSerial.available() > 0) {
+						_wifiSerial.read();
+					}
+					break;
 				}
 			}
 			rxBuffer[rxBufferCursor] = '\0';
