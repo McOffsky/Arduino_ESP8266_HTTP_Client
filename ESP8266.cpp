@@ -266,6 +266,7 @@ void ESP8266::setOnWifiDisconnected(void(*handler)()) {
 
 
 void ESP8266::connectToServer() {
+	httpTestTimestamp = currentTimestamp;
 	state = STATE_SENDING_DATA;
 	_wifiSerial.print(F("AT+CIPSTART=\"TCP\",\""));
 	_wifiSerial.print(serverIP);
@@ -352,7 +353,7 @@ void ESP8266::SendDataLength()
 		length = length + 3 + strlen(queryData);
 	}
 	if (postData != NULL) {
-		length = length + 22 + strlen(postData);
+		length = length + 20 + strlen(postData);
 		if (strlen(postData) > 9) {
 			length++;
 		}
@@ -402,7 +403,7 @@ void ESP8266::SendData(uint8_t serialResponseStatus) {
 			_wifiSerial.print(wifi.postData);
 			_wifiSerial.print(F("\r\n"));
 		}
-		_wifiSerial.print(F("\r\n"));
+		_wifiSerial.print(F("\r\n\r\n"));
 
 		wifi.setResponseTrueKeywords(KEYWORD_SEND_OK);
 		wifi.setResponseFalseKeywords(KEYWORD_ERROR);
@@ -531,22 +532,20 @@ void ESP8266::closeConnection(void)
 {
 	wifi.state = STATE_CONNECTED;
 	_wifiSerial.println(F("AT+CIPCLOSE"));
-	setResponseTrueKeywords(KEYWORD_OK);
-	setResponseFalseKeywords(KEYWORD_ERROR);
+	setResponseTrueKeywords(KEYWORD_OK, KEYWORD_ERROR);
+	setResponseFalseKeywords();
 	readResponse(10000, PostCloseConnection);
 }
 
 void ESP8266::PostCloseConnection(uint8_t serialResponseStatus) {
 	wifi.state = STATE_CONNECTED;
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		if (strstr(wifi.rxBuffer, "CLOSED") != NULL) {
-			//DBG("ESP8266 socket connection closed  \r\n");
-			wifi.clearRequestData();
-		}
-		else {
-			DBG(wifi.rxBuffer);
-			DBG(F("\r\nESP8266 cannot close socket connection  \r\n"));
-		}
+		wifi.clearRequestData();
+			
+		DBG(F("ESP8266 response recived, http request took "));
+		DBG(wifi.currentTimestamp - wifi.httpTestTimestamp);
+		DBG(F("ms \r\n"));
+		
 	}
 	else if (serialResponseStatus == SERIAL_RESPONSE_FALSE) {
 		DBG(wifi.rxBuffer);

@@ -190,6 +190,7 @@ protected:
 	unsigned long serialResponseTimeout;
 	unsigned long serialResponseTimestamp;
 	unsigned long lastActivityTimestamp;
+	unsigned long httpTestTimestamp;
 
 	// request data
 	char *serverIP;
