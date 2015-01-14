@@ -360,6 +360,9 @@ void ESP8266::SendDataLength()
 		if (strlen(postData) > 99) {
 			length++;
 		}
+		if (strlen(postData) > 999) {
+			length++;
+		}
 	}
 	//DBG("data length ");
 	//DBG(length);
@@ -374,45 +377,34 @@ void ESP8266::SendDataLength()
 
 void ESP8266::SendData(uint8_t serialResponseStatus) {
 	wifi.state = STATE_SENDING_DATA;
-	wifi.rxBuffer[0] = '\0';
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		strcat(wifi.rxBuffer, wifi.method);
-		strcat(wifi.rxBuffer, " ");
+		_wifiSerial.print(wifi.method);
+		_wifiSerial.print(F(" "));
 
-		strcat(wifi.rxBuffer, wifi.url);
+		_wifiSerial.print(wifi.url);
 
 		if (wifi.queryData != NULL) {
-			strcat(wifi.rxBuffer, "?q=");
-			strcat(wifi.rxBuffer, wifi.queryData);
+			_wifiSerial.print(F("?q="));
+			_wifiSerial.print(wifi.queryData);
 		}
-		strcat(wifi.rxBuffer, " HTTP/1.1\r\n");
+		_wifiSerial.print(F(" HTTP/1.1\r\n"));
 
-		strcat(wifi.rxBuffer, "Host: ");
-		strcat(wifi.rxBuffer, wifi.serverIP);
-		//delete wifi.serverIP;
-		//wifi.serverIP = NULL;
+		_wifiSerial.print(F("Host: "));
+		_wifiSerial.print(wifi.serverIP);
 
-		strcat(wifi.rxBuffer, "\r\n");
-		strcat(wifi.rxBuffer, "Connection: close\r\n");
-		strcat(wifi.rxBuffer, "User-Agent: Arduino_ESP8266_HTTP_Client\r\n");
+		_wifiSerial.print(F("\r\n"));
+		_wifiSerial.print(F("Connection: close\r\n"));
+		_wifiSerial.print(F("User-Agent: Arduino_ESP8266_HTTP_Client\r\n"));
 
 		if (wifi.postData != NULL) {
-			strcat(wifi.rxBuffer, "Content-Length: ");
-			char _itoa[5];
-			itoa(strlen(wifi.postData), _itoa, 4);
-			strcat(wifi.rxBuffer, _itoa);
-			strcat(wifi.rxBuffer, "\r\n\r\n");
-			strcat(wifi.rxBuffer, wifi.postData);
-			strcat(wifi.rxBuffer, "\r\n");
+			_wifiSerial.print(F("Content-Length: "));
+			_wifiSerial.print(strlen(wifi.postData));
+			_wifiSerial.print(F("\r\n\r\n"));
+			_wifiSerial.print(wifi.postData);
+			_wifiSerial.print(F("\r\n"));
 		}
-		strcat(wifi.rxBuffer, "\r\n");
-		_wifiSerial.print(wifi.rxBuffer);
+		_wifiSerial.print(F("\r\n"));
 
-		//DBG(F("ESP8266 sending data... \r\n"));
-		//DBG(wifi.rxBuffer);
-		//DBG(strlen(wifi.rxBuffer));
-		//DBG("\r\n");
-		wifi.rxBuffer[0] = '\0';
 		wifi.setResponseTrueKeywords(KEYWORD_SEND_OK);
 		wifi.setResponseFalseKeywords(KEYWORD_ERROR);
 		wifi.readResponse(20000, ConfirmSend);
