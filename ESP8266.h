@@ -59,7 +59,7 @@
 #define ESP8266_RST 16 // connected to RST pin on ESP8266
 
 // comment to hide debug serial output
-#define DEBUG
+//#define DEBUG
 
 // internal buffer size 
 #define SERIAL_RX_BUFFER_SIZE 512

@@ -540,8 +540,6 @@ void ESP8266::closeConnection(void)
 void ESP8266::PostCloseConnection(uint8_t serialResponseStatus) {
 	wifi.state = STATE_CONNECTED;
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		wifi.clearRequestData();
-			
 		DBG(F("ESP8266 response recived, http request took "));
 		DBG(wifi.currentTimestamp - wifi.httpTestTimestamp);
 		DBG(F("ms \r\n"));

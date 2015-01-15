@@ -5,7 +5,7 @@ Library for simple http communication with webserver. Library does not block
 work of your program (no delay() is used!), does not use memory-expensive
 String lib and handles most of ESP8266 errors by itself.
 Just set handlers, connect to AP and play with it. Ideal for JSON based
-applications.
+applications (tested with ArduinoJson library).
 
 Library has internal static buffer. You need to set size of this buffer
 according to your needs (but keep in mind that only http header can be 
@@ -14,6 +14,9 @@ longer than 300 characters).
 Bug reports and push request are welcomed :)
 
 Based on work by Stan Lee(Lizq@iteadstudio.com).
+
+Topic:
+http://www.esp8266.com/viewtopic.php?f=8&t=1205
 
 # Instructions #
 
