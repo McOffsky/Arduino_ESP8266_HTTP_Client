@@ -111,6 +111,8 @@ boolean ESP8266::sendHttpRequest(char _serverIP[], uint8_t _port, char _method[]
 
 void ESP8266::hardReset(void)
 {
+	connected = false;
+	strcpy(ip, "");
 	digitalWrite(ESP8266_RST, LOW);
 	delay(ESP8266_HARD_RESET_DURACTION);
 	digitalWrite(ESP8266_RST, HIGH);
@@ -119,6 +121,8 @@ void ESP8266::hardReset(void)
 
 void ESP8266::softReset(void)
 {
+	connected = false;
+	strcpy(ip, "");
 	state = STATE_RESETING;
 	_wifiSerial.println(F("AT+RST"));
 
@@ -496,7 +500,9 @@ void ESP8266::processHttpResponse() {
 		pch = strchr(rxBuffer, ' ');
 		char codeCh[] = { *(pch + 1), *(pch + 2), *(pch + 3) };
 		int code = atoi(codeCh);
-
+		if (rxBufferCursor == (SERIAL_RX_BUFFER_SIZE - 1)) {
+			code = 999;
+		}
 		// get response body
 		while (pch != NULL) {
 			if (*(pch + 1) == 13) {

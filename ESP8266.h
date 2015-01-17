@@ -53,7 +53,7 @@
 #define ESP8266_BAUD_RATE 115200 //baud rate of your module, bigger == better
 #define DEBUG_BAUD_RATE 9600
 
-#define ESP8266_IP_WATCHDOG_INTERVAL 30000 //time between ip (connection status) checks
+#define ESP8266_IP_WATCHDOG_INTERVAL 15000 //time between ip (connection status) checks
 
 #define ESP8266_HARD_RESET_DURACTION 1500
 #define ESP8266_RST 16 // connected to RST pin on ESP8266
