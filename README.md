@@ -7,9 +7,9 @@ String lib and handles most of ESP8266 errors by itself.
 Just set handlers, connect to AP and play with it. Ideal for JSON based
 applications (tested with ArduinoJson library).
 
-Library has internal static buffer. You need to set size of this buffer
-according to your needs (but keep in mind that only http header can be 
-longer than 300 characters).
+Library has internal static buffer for async data recive from ESP8266. You will 
+need to set size of this buffer according to your needs (but keep in mind that
+only http header can be longer than 300 characters).
 
 Bug reports and push request are welcomed :)
 
@@ -23,7 +23,17 @@ http://www.esp8266.com/viewtopic.php?f=8&t=1205
 Library was developed with ESP8266 firmware v0.20. Older versions of firmware
 might not work with this lib.  
 
-How to connect to PC and update your ESP8266 is explained in this video: 
+After some tests it looks like there's some problems with Software Serial (and alternatives)
+and ESP8266, so I strongly reccomend connecting ESP8266 to Hardware Serial (if you have UNO
+you will need FTDI for debug).
+
+UNO connection example, LM317T is used as voltage requlator in this case.
+![alt tag](https://dl.dropboxusercontent.com/u/2844497/ESP8266/uno.png)
+  
+MEGA connection example, LM317T is used as voltage requlator in this case.
+![alt tag](https://dl.dropboxusercontent.com/u/2844497/ESP8266/mega.png)
+
+How to connect to PC and update (firmware is included in lib files) your ESP8266 is explained in this video: 
 
 https://www.youtube.com/watch?v=9QZkCQSHnko
 
