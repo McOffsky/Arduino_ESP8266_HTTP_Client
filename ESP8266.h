@@ -50,44 +50,54 @@
 	#include "WProgram.h"
 #endif
 
-#define ESP8266_BAUD_RATE 115200 //baud rate of your module, bigger == better
+#define ESP8266_BAUD_RATE 115200
 #define DEBUG_BAUD_RATE 9600
 
 #define ESP8266_IP_WATCHDOG_INTERVAL 15000 //time between ip (connection status) checks
 
 #define ESP8266_HARD_RESET_DURACTION 1500
-#define ESP8266_RST 16 // connected to RST pin on ESP8266
 
 // comment to hide debug serial output
-//#define DEBUG
+#define DEBUG
 
 // internal buffer size 
 #define SERIAL_RX_BUFFER_SIZE 512
+// request buffer size
+#define REQUEST_BUFFER 5
 
-//#define UNO			//uncomment this line when you use it with UNO board
-#define MEGA		//uncomment this line when you use it with MEGA board
+#define UNO			//uncomment this line when you use it with UNO board
+//#define MEGA		//uncomment this line when you use it with MEGA board
 
 // UNO board settings. Hardware serial is used for communication with ESP8266, Software for your pc.
 #ifdef UNO
-	#include <SoftwareSerial.h>
 
-	#define _DBG_RXPIN_ 2  //needed only on uno
-	#define _DBG_TXPIN_ 3  //needed only on uno
-
-	extern SoftwareSerial mySerial;
-
+	#define ESP8266_RST 2 // connected to RST pin on ESP8266
+	#ifdef DEBUG
+		#include <SoftwareSerial.h>
+		#define DBG_RX		3
+		#define DBG_TX		4
+		extern SoftwareSerial softSerial;
+		#define DebugSerial	softSerial
+	#else
+		#define DebugSerial
+	#endif  
 	#define _wifiSerial	Serial
-	#define DebugSerial	mySerial
 #endif  
 
 // MEGA board has multiple hardware serials, so both pc and ESP8266 can be connected via hardware serial
 #ifdef MEGA
 	#define _wifiSerial	Serial1 
-	#define DebugSerial	Serial
+	#ifdef DEBUG
+		#define DebugSerial	Serial
+	#else
+		#define DebugSerial
+	#endif  
+ 
+	#define ESP8266_RST 16 // connected to RST pin on ESP8266
 #endif  
 	
 
-
+#define KEYWORDS_LIMIT 2
 
 // type of initialized WIFI
 #define    STA     1
@@ -125,6 +135,16 @@
 
 class ESP8266 
 {
+
+	struct request {
+		char *serverIP;
+		uint8_t port;
+		char *method;
+		char *url;
+		char *postData;
+		char *queryData;
+	};
+
   public:
 	// init lib
 	boolean begin(void);
@@ -173,14 +193,16 @@ class ESP8266
 
 protected:
 	// internal buffer for reciving and sending msg to ESP8266
-	char rxBuffer[SERIAL_RX_BUFFER_SIZE];
-	uint16_t rxBufferCursor;
+	char buffer[SERIAL_RX_BUFFER_SIZE];
+	uint16_t bufferCursor;
 
 	// library state
 	uint8_t state;
 
 	// wifi connection internal indicatior, for checking status externally use isConnected()
 	boolean connected;
+
+	request requests[REQUEST_BUFFER];
 
 	// current ip in char array
 	char ip[16];
@@ -191,14 +213,6 @@ protected:
 	unsigned long serialResponseTimestamp;
 	unsigned long lastActivityTimestamp;
 	unsigned long httpTestTimestamp;
-
-	// request data
-	char *serverIP;
-	uint8_t port;
-	char *method;
-	char *url;
-	char *postData;
-	char *queryData;
 
 	// wifi connection parameters
 	char *ssid;
@@ -212,18 +226,18 @@ protected:
 	void(*serialResponseHandler)(uint8_t serialResponseStatus);
 
 	// serial response keywords for current communication
-	char responseTrueKeywords[2][16];
-	char responseFalseKeywords[2][16];
+	char responseTrueKeywords[KEYWORDS_LIMIT][16];
+	char responseFalseKeywords[KEYWORDS_LIMIT][16];
 
 	// find given keywords in buffer
-	boolean bufferFind(char keywords[][16] = NULL);
+	boolean bufferFind(char keywords[][16]);
 
 	// non blocking serial reading
 	void readResponse(unsigned long timeout, void(*handler)(uint8_t serialResponseStatus));
 
 	// serial keywords setters 
-	void setResponseTrueKeywords(char w1[] = NULL, char w2[] = NULL);
-	void setResponseFalseKeywords(char w1[] = NULL, char w2[] = NULL);
+	void setResponseTrueKeywords(char w1[] = "", char w2[] = "");
+	void setResponseFalseKeywords(char w1[] = "", char w2[] = "");
 
 	// attempt counter, returns true while attempt counter is lower then given max
 	boolean attempt(uint8_t max);
@@ -238,6 +252,8 @@ protected:
 	static void SendData(uint8_t serialResponseStatus);
 	static void ConfirmSend(uint8_t serialResponseStatus);
 	void clearRequestData();
+	void requestsShift();
+	void clearAllRequests();
 	static void ReadMessage(uint8_t serialResponseStatus);
 	void processHttpResponse();
 
@@ -245,6 +261,7 @@ protected:
 	static void PostCloseConnection(uint8_t serialResponseStatus);
 
 	boolean lineStartsWith(char* base, char* str);
+	void serialFlush();
 	
 	// ip functions
 	void ipWatchdog(void);
