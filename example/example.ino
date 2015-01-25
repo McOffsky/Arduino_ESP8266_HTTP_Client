@@ -12,8 +12,8 @@ void setup() {
 	digitalWrite(13, LOW);
 	//Serial.begin(9600);
 
-	wifi.begin();
 	wifi.hardReset();
+	wifi.begin();
 	wifi.setOnWifiConnected(connectedHandler);
 	wifi.setOnWifiDisconnected(disconnectedHandler);
 	wifi.setOnDataRecived(dataprocessHandler);
