@@ -27,12 +27,12 @@ After some tests it looks like there's some problems with Software Serial (and a
 and ESP8266, so I strongly reccomend connecting ESP8266 to Hardware Serial (if you have UNO
 you will need FTDI for debug).
 
-UNO connection example, LM317T is used as voltage requlator in this case. FTDI connectior is included.
+UNO connection example, LM317T is used as voltage regulator in this case. FTDI connectior included.
 
 ![alt tag](https://dl.dropboxusercontent.com/u/2844497/ESP8266/uno.png)
   
   
-MEGA connection example, LM317T is used as voltage requlator in this case.
+MEGA connection example, LM317T is used as voltage regulator in this case.
 
 ![alt tag](https://dl.dropboxusercontent.com/u/2844497/ESP8266/mega.png)
 
