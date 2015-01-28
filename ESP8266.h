@@ -212,7 +212,6 @@ protected:
 	unsigned long serialResponseTimeout;
 	unsigned long serialResponseTimestamp;
 	unsigned long lastActivityTimestamp;
-	unsigned long httpTestTimestamp;
 
 	// wifi connection parameters
 	char *ssid;

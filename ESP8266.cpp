@@ -53,12 +53,14 @@
 
 #ifdef DEBUG
 	#define DBG(message)    DebugSerial.print(message)
-	#define DBGL(message)    DebugSerial.println(message)
-	#define DBGW(message)    DebugSerial.write(message)
+	#define DBGL(message)   DebugSerial.println(message)
+	#define DBGW(message)   DebugSerial.write(message)
+	#define DBGBEG()			DebugSerial.begin(DEBUG_BAUD_RATE)
 #else
 	#define DBG(message)
 	#define DBGL(message)
 	#define DBGW(message)
+	#define DBGBEG()
 #endif
 
 
@@ -70,8 +72,7 @@ boolean ESP8266::begin(void)
 	clearAllRequests();
 	hardReset();
 	lastActivityTimestamp = 0;
-
-	DebugSerial.begin(DEBUG_BAUD_RATE);
+	DBGBEG();
 	_wifiSerial.begin(ESP8266_BAUD_RATE);
 
 	//_wifiSerial.flush();
@@ -304,7 +305,6 @@ void ESP8266::setOnWifiDisconnected(void(*handler)()) {
 
 
 void ESP8266::connectToServer() {
-	httpTestTimestamp = currentTimestamp;
 	state = STATE_SENDING_DATA;
 	_wifiSerial.print(F("AT+CIPSTART=\"TCP\",\""));
 	_wifiSerial.print(requests[0].serverIP);
@@ -525,10 +525,15 @@ void ESP8266::processHttpResponse() {
 	if (lineStartsWith(buffer, "HTTP")) {
 		// read response code
 		pch = strchr(buffer, ' ');
-		char codeCh[] = { *(pch + 1), *(pch + 2), *(pch + 3) };
+		char codeCh[] = { *(pch + 1), *(pch + 2), *(pch + 3), NULL };
 		int code = atoi(codeCh);
 		if (bufferCursor == (SERIAL_RX_BUFFER_SIZE - 1)) {
 			code = 999;
+		}
+		if (code > 999 || code < 100) {
+			DBG(F("Wrong response code: "));
+			DBG(codeCh);
+			DBG(F("\r\n"));
 		}
 		// get response body
 		while (pch != NULL) {
@@ -573,9 +578,9 @@ void ESP8266::closeConnection(void)
 void ESP8266::PostCloseConnection(uint8_t serialResponseStatus) {
 	wifi.state = STATE_CONNECTED;
 	if (serialResponseStatus == SERIAL_RESPONSE_TRUE) {
-		DBG(F("ESP8266 response recived, http request took "));
-		DBG(wifi.currentTimestamp - wifi.httpTestTimestamp);
-		DBG(F("ms \r\n"));
+		//DBG(F("ESP8266 response recived, http request took "));
+		//DBG(wifi.currentTimestamp - wifi.httpTestTimestamp);
+		//DBG(F("ms \r\n"));
 		
 	}
 	else if (serialResponseStatus == SERIAL_RESPONSE_FALSE) {
